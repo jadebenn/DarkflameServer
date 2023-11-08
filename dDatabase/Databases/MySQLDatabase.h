@@ -86,12 +86,18 @@ public:
 		const std::string_view username,
 		const std::string_view systemAddress,
 		const std::string_view extraMessage) override;
-	void InsertNewMail(const DatabaseStructs::MailInsert& mail) override;
+	void InsertNewMail(const DatabaseStructs::MailInfo& mail) override;
 	void InsertNewUgcModel(
 		std::istringstream& sd0Data,
 		const uint32_t blueprintId,
 		const uint32_t accountId,
 		const uint32_t characterId) override;
+	std::vector<DatabaseStructs::MailInfo> GetMailForPlayer(const uint32_t numberOfMail, const uint32_t characterId) override;
+	std::optional<DatabaseStructs::MailInfo> GetMail(const uint64_t mailId) override;
+	uint32_t GetUnreadMailCount(const uint32_t characterId) override;
+	void MarkMailRead(const uint64_t mailId) override;
+	void DeleteMail(const uint64_t mailId) override;
+	void ClaimMailItem(const uint64_t mailId) override;
 private:
 	std::unique_ptr<sql::PreparedStatement> CreatePreppedStmtUnique(const std::string& query);
 

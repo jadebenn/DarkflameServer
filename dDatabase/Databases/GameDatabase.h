@@ -83,12 +83,18 @@ public:
 		const std::string_view username,
 		const std::string_view systemAddress,
 		const std::string_view extraMessage) = 0;
-	virtual void InsertNewMail(const DatabaseStructs::MailInsert& mail) = 0;
+	virtual void InsertNewMail(const DatabaseStructs::MailInfo& mail) = 0;
 	virtual void InsertNewUgcModel(
 		std::istringstream& sd0Data,
 		const uint32_t blueprintId,
 		const uint32_t accountId,
 		const uint32_t characterId) = 0;
+	virtual std::vector<DatabaseStructs::MailInfo> GetMailForPlayer(const uint32_t numberOfMail, const uint32_t characterId) = 0;
+	virtual std::optional<DatabaseStructs::MailInfo> GetMail(const uint64_t mailId) = 0;
+	virtual uint32_t GetUnreadMailCount(const uint32_t characterId) = 0;
+	virtual void MarkMailRead(const uint64_t mailId) = 0;
+	virtual void DeleteMail(const uint64_t mailId) = 0;
+	virtual void ClaimMailItem(const uint64_t mailId) = 0;
 };
 
 #endif  //!__GAMEDATABASE__H__

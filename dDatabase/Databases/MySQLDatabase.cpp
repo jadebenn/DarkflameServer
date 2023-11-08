@@ -625,7 +625,7 @@ void MySQLDatabase::RemoveUnreferencedUgcModels() {
 	auto stmt = ExecuteQueryUnique("DELETE FROM ugc WHERE id NOT IN (SELECT ugc_id FROM properties_contents WHERE ugc_id IS NOT NULL);");
 }
 
-void MySQLDatabase::InsertNewPropertyModel(const LWOOBJID& propertyId, const DatabaseStructs::DatabaseModel& model, const std::string_view name) {
+void MySQLDatabase::InsertNewPropertyModel(const LWOOBJID& propertyId, const DatabaseModel& model, const std::string_view name) {
 	auto stmt = CreatePreppedStmtUnique(
 		"INSERT INTO properties_contents"
 		"(id, property_id, ugc_id, lot, x, y, z, rx, ry, rz, rw, model_name, model_description, behavior_1, behavior_2, behavior_3, behavior_4, behavior_5)"
@@ -637,8 +637,8 @@ void MySQLDatabase::InsertNewPropertyModel(const LWOOBJID& propertyId, const Dat
 	stmt->setUInt64(2, propertyId);
 
 	model.ugcId == 0
-	? stmt->setNull(3, sql::DataType::BIGINT)
-	: stmt->setUInt(3, model.ugcId);
+		? stmt->setNull(3, sql::DataType::BIGINT)
+		: stmt->setUInt(3, model.ugcId);
 
 	stmt->setUInt(4, static_cast<uint32_t>(model.lot));
 	stmt->setFloat(5, model.position.x);
@@ -758,22 +758,6 @@ void MySQLDatabase::InsertCheatDetection(
 	stmt->execute();
 }
 
-void MySQLDatabase::InsertNewMail(const DatabaseStructs::MailInsert& mail) {
-	auto stmt = CreatePreppedStmtUnique(
-		"INSERT INTO `mail`(`sender_id`, `sender_name`, `receiver_id`, `receiver_name`, `time_sent`, `subject`, `body`, `attachment_id`, `attachment_lot`, `attachment_subkey`, `attachment_count`, `was_read`) VALUES (?,?,?,?,?,?,?,?,?,?,?,0)");
-	stmt->setUInt(1, mail.senderId);
-	stmt->setString(2, mail.senderUsername.c_str());
-	stmt->setUInt(3, mail.receiverId);
-	stmt->setString(4, mail.recipient.c_str());
-	stmt->setUInt64(5, time(NULL));
-	stmt->setString(6, mail.subject);
-	stmt->setString(7, mail.body);
-	stmt->setUInt(8, mail.itemID);
-	stmt->setInt(9, mail.itemLOT);
-	stmt->setInt(10, 0);
-	stmt->setInt(11, mail.attachmentCount);
-	stmt->execute();
-}
 void MySQLDatabase::InsertNewUgcModel(
 	std::istringstream& sd0Data, // cant be const sad
 	const uint32_t blueprintId,
@@ -789,4 +773,94 @@ void MySQLDatabase::InsertNewUgcModel(
 	ugcs->setBoolean(6, false);
 	ugcs->setString(7, "weedeater.lxfml");
 	ugcs->execute();
+}
+
+void MySQLDatabase::InsertNewMail(const MailInfo& mail) {
+	auto stmt = CreatePreppedStmtUnique(
+		"INSERT INTO `mail`(`sender_id`, `sender_name`, `receiver_id`, `receiver_name`, `time_sent`, `subject`, `body`, `attachment_id`, `attachment_lot`, `attachment_subkey`, `attachment_count`, `was_read`) VALUES (?,?,?,?,?,?,?,?,?,?,?,0)");
+	stmt->setUInt64(1, mail.senderId);
+	stmt->setString(2, mail.senderUsername.c_str());
+	stmt->setUInt(3, mail.receiverId);
+	stmt->setString(4, mail.recipient.c_str());
+	stmt->setUInt64(5, time(NULL));
+	stmt->setString(6, mail.subject);
+	stmt->setString(7, mail.body);
+	stmt->setUInt(8, mail.itemID);
+	stmt->setInt(9, mail.itemLOT);
+	stmt->setInt(10, 0);
+	stmt->setInt(11, mail.itemCount);
+	stmt->execute();
+}
+
+std::vector<MailInfo> MySQLDatabase::GetMailForPlayer(const uint32_t numberOfMail, const uint32_t characterId) {
+	auto stmt = CreatePreppedStmtUnique("SELECT id, subject, body, sender_name, attachment_id, attachment_lot, attachment_subkey, attachment_count, was_read, time_sent FROM mail WHERE receiver_id=? limit 20;");
+	stmt->setUInt(1, characterId);
+	auto res = ExecuteQueryUnique(stmt);
+
+	std::vector<MailInfo> toReturn;
+	toReturn.reserve(res->rowsCount());
+
+	while (res->next()) {
+		MailInfo mail;
+		mail.id = res->getUInt64("id");
+		mail.subject = res->getString("subject").c_str();
+		mail.body = res->getString("body").c_str();
+		mail.senderUsername = res->getString("sender_name").c_str();
+		mail.itemID = res->getUInt("attachment_id");
+		mail.itemLOT = res->getInt("attachment_lot");
+		mail.itemSubkey = res->getInt("attachment_subkey");
+		mail.itemCount = res->getInt("attachment_count");
+		mail.timeSent = res->getUInt64("time_sent");
+		mail.wasRead = res->getBoolean("was_read");
+
+		toReturn.push_back(std::move(mail));
+	}
+
+	return toReturn;
+}
+
+std::optional<MailInfo> MySQLDatabase::GetMail(const uint64_t mailId) {
+	auto stmt = CreatePreppedStmtUnique("SELECT attachment_lot, attachment_count FROM mail WHERE id=? LIMIT 1;");
+	stmt->setUInt64(1, mailId);
+	auto res = ExecuteQueryUnique(stmt);
+
+	if (!res->next()) {
+		return std::nullopt;
+	}
+
+	MailInfo toReturn;
+	toReturn.itemLOT = res->getInt("attachment_lot");
+	toReturn.itemCount = res->getInt("attachment_count");
+
+	return toReturn;
+}
+
+uint32_t MySQLDatabase::GetUnreadMailCount(const uint32_t characterId) {
+	auto stmt = CreatePreppedStmtUnique("SELECT COUNT(*) as number_unread FROM mail WHERE receiver_id=? AND was_read=0;");
+	stmt->setUInt(1, characterId);
+	auto res = ExecuteQueryUnique(stmt);
+
+	if (!res->next()) {
+		return 0;
+	}
+
+	return res->getInt("number_unread");
+}
+
+void MySQLDatabase::MarkMailRead(const uint64_t mailId) {
+	auto stmt = CreatePreppedStmtUnique("UPDATE mail SET was_read=1 WHERE id=? LIMIT 1;");
+	stmt->setUInt64(1, mailId);
+	stmt->executeUpdate();
+}
+
+void MySQLDatabase::DeleteMail(const uint64_t mailId) {
+	auto stmt = CreatePreppedStmtUnique("DELETE FROM mail WHERE id=? LIMIT 1;");
+	stmt->setUInt64(1, mailId);
+	stmt->execute();
+}
+
+void MySQLDatabase::ClaimMailItem(const uint64_t mailId) {
+	auto stmt = CreatePreppedStmtUnique("UPDATE mail SET attachment_lot=0 WHERE id=? LIMIT 1;");
+	stmt->setUInt64(1, mailId);
+	stmt->executeUpdate();
 }
