@@ -50,14 +50,7 @@ void ObjectIDManager::Initialize(Logger* logger) {
 uint32_t ObjectIDManager::GeneratePersistentID(void) {
 	uint32_t toReturn = ++this->currentPersistentID;
 
-	// So we peroidically save our ObjID to the database:
-	// if (toReturn % 25 == 0) { // TEMP: DISABLED FOR DEBUG / DEVELOPMENT!
-		sql::PreparedStatement* stmt = Database::Get()->CreatePreppedStmt(
-			"UPDATE object_id_tracker SET last_object_id=?");
-		stmt->setUInt(1, toReturn);
-		stmt->execute();
-		delete stmt;
-	// }
+	SaveToDatabase();
 
 	return toReturn;
 }
