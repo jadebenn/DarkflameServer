@@ -55,7 +55,7 @@ public:
 	void UpdateLastLoggedInCharacter(const uint32_t characterId) override;
 	void SetPetNameModerationStatus(const LWOOBJID& petId, const std::string_view name, const int32_t approvalStatus) override;
 	std::optional<DatabaseStructs::PetNameInfo> GetPetNameInfo(const LWOOBJID& petId) override;
-	std::optional<DatabaseStructs::PropertyInfo> GetPropertyInfo(const uint32_t templateId, const uint32_t cloneId) override;
+	std::optional<DatabaseStructs::PropertyInfo> GetPropertyInfo(const uint32_t templateId, const LWOCLONEID cloneId) override;
 	void UpdatePropertyModerationInfo(const LWOOBJID& id, const uint32_t privacyOption, const std::string_view rejectionReason, const uint32_t modApproved) override;
 	void UpdatePropertyDetails(const LWOOBJID& id, const std::string_view name, const std::string_view description) override;
 	void InsertNewProperty(
@@ -87,6 +87,11 @@ public:
 		const std::string_view systemAddress,
 		const std::string_view extraMessage) override;
 	void InsertNewMail(const DatabaseStructs::MailInsert& mail) override;
+	void InsertNewUgcModel(
+		std::istringstream& sd0Data,
+		const uint32_t blueprintId,
+		const uint32_t accountId,
+		const uint32_t characterId) override;
 private:
 	std::unique_ptr<sql::PreparedStatement> CreatePreppedStmtUnique(const std::string& query);
 

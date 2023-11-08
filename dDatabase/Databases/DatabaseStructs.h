@@ -79,7 +79,7 @@ namespace DatabaseStructs {
 		LOT lot;
 		NiPoint3 position;
 		NiQuaternion rotation;
-		LWOOBJID ugcId;
+		uint32_t ugcId;
 	};
 
 	struct PropertyModerationInfo {

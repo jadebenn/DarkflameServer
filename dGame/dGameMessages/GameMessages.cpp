@@ -2592,21 +2592,9 @@ void GameMessages::HandleBBBSaveRequest(RakNet::BitStream* inStream, Entity* ent
 		if (propertyInfo) propertyId = propertyInfo->id;
 
 		//Insert into ugc:
-		auto ugcs = Database::Get()->CreatePreppedStmt("INSERT INTO `ugc`(`id`, `account_id`, `character_id`, `is_optimized`, `lxfml`, `bake_ao`, `filename`) VALUES (?,?,?,?,?,?,?)");
-		ugcs->setUInt(1, blueprintIDSmall);
-		ugcs->setInt(2, entity->GetParentUser()->GetAccountID());
-		ugcs->setInt(3, entity->GetCharacter()->GetID());
-		ugcs->setInt(4, 0);
-
-		//whacky stream biz
-		std::string s(sd0Data.get(), sd0Size);
-		std::istringstream iss(s);
-
-		ugcs->setBlob(5, &iss);
-		ugcs->setBoolean(6, false);
-		ugcs->setString(7, "weedeater.lxfml");
-		ugcs->execute();
-		delete ugcs;
+		std::string str(sd0Data.get(), sd0Size);
+		std::istringstream sd0DataStream(str);
+		Database::Get()->InsertNewUgcModel(sd0DataStream, blueprintIDSmall, entity->GetParentUser()->GetAccountID(), entity->GetCharacter()->GetID());
 
 		//Insert into the db as a BBB model:
 		DatabaseStructs::DatabaseModel model;

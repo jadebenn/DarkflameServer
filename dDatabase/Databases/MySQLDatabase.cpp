@@ -270,16 +270,13 @@ void MySQLDatabase::UpdateActivityLog(const uint32_t accountId, const eActivityT
 }
 
 void MySQLDatabase::DeleteUgcModelData(const LWOOBJID& modelId) {
-	{
-		auto deleteQuery = CreatePreppedStmtUnique("DELETE FROM ugc WHERE id = ?;");
-		deleteQuery->setUInt64(1, modelId);
-		deleteQuery->execute();
-	}
-	{
-		auto deleteQuery = CreatePreppedStmtUnique("DELETE FROM properties_contents WHERE ugc_id = ?;");
-		deleteQuery->setUInt64(1, modelId);
-		deleteQuery->execute();
-	}
+	auto deleteQuery = CreatePreppedStmtUnique("DELETE FROM ugc WHERE id = ?;");
+	deleteQuery->setUInt64(1, modelId);
+	deleteQuery->execute();
+
+	deleteQuery = CreatePreppedStmtUnique("DELETE FROM properties_contents WHERE ugc_id = ?;");
+	deleteQuery->setUInt64(1, modelId);
+	deleteQuery->execute();
 }
 
 void MySQLDatabase::UpdateUgcModelData(const LWOOBJID& modelId, std::istringstream& lxfml) {
@@ -438,57 +435,46 @@ bool MySQLDatabase::IsCharacterIdInUse(const uint32_t characterId) {
 }
 
 void MySQLDatabase::DeleteCharacter(const uint32_t characterId) {
-	{
-		auto stmt = CreatePreppedStmtUnique("DELETE FROM charxml WHERE id=? LIMIT 1;");
-		stmt->setUInt(1, characterId);
-		stmt->execute();
-	}
-	{
-		auto stmt = CreatePreppedStmtUnique("DELETE FROM command_log WHERE character_id=?;");
-		stmt->setUInt(1, characterId);
-		stmt->execute();
-	}
-	{
-		auto stmt = CreatePreppedStmtUnique("DELETE FROM friends WHERE player_id=? OR friend_id=?;");
-		stmt->setUInt(1, characterId);
-		stmt->setUInt(2, characterId);
-		stmt->execute();
-	}
-	{
-		auto stmt = CreatePreppedStmtUnique("DELETE FROM leaderboard WHERE character_id=?;");
-		stmt->setUInt(1, characterId);
-		stmt->execute();
-	}
-	{
-		auto stmt = CreatePreppedStmtUnique("DELETE FROM properties_contents WHERE property_id IN (SELECT id FROM properties WHERE owner_id=?);");
-		stmt->setUInt(1, characterId);
-		stmt->execute();
-	}
-	{
-		auto stmt = CreatePreppedStmtUnique("DELETE FROM properties WHERE owner_id=?;");
-		stmt->setUInt(1, characterId);
-		stmt->execute();
-	}
-	{
-		auto stmt = CreatePreppedStmtUnique("DELETE FROM ugc WHERE character_id=?;");
-		stmt->setUInt(1, characterId);
-		stmt->execute();
-	}
-	{
-		auto stmt = CreatePreppedStmtUnique("DELETE FROM activity_log WHERE character_id=?;");
-		stmt->setUInt(1, characterId);
-		stmt->execute();
-	}
-	{
-		auto stmt = CreatePreppedStmtUnique("DELETE FROM mail WHERE receiver_id=?;");
-		stmt->setUInt(1, characterId);
-		stmt->execute();
-	}
-	{
-		auto stmt = CreatePreppedStmtUnique("DELETE FROM charinfo WHERE id=? LIMIT 1;");
-		stmt->setUInt(1, characterId);
-		stmt->execute();
-	}
+	auto stmt = CreatePreppedStmtUnique("DELETE FROM charxml WHERE id=? LIMIT 1;");
+	stmt->setUInt(1, characterId);
+	stmt->execute();
+
+	stmt = CreatePreppedStmtUnique("DELETE FROM command_log WHERE character_id=?;");
+	stmt->setUInt(1, characterId);
+	stmt->execute();
+
+	stmt = CreatePreppedStmtUnique("DELETE FROM friends WHERE player_id=? OR friend_id=?;");
+	stmt->setUInt(1, characterId);
+	stmt->setUInt(2, characterId);
+	stmt->execute();
+
+	stmt = CreatePreppedStmtUnique("DELETE FROM leaderboard WHERE character_id=?;");
+	stmt->setUInt(1, characterId);
+	stmt->execute();
+
+	stmt = CreatePreppedStmtUnique("DELETE FROM properties_contents WHERE property_id IN (SELECT id FROM properties WHERE owner_id=?);");
+	stmt->setUInt(1, characterId);
+	stmt->execute();
+
+	stmt = CreatePreppedStmtUnique("DELETE FROM properties WHERE owner_id=?;");
+	stmt->setUInt(1, characterId);
+	stmt->execute();
+
+	stmt = CreatePreppedStmtUnique("DELETE FROM ugc WHERE character_id=?;");
+	stmt->setUInt(1, characterId);
+	stmt->execute();
+
+	stmt = CreatePreppedStmtUnique("DELETE FROM activity_log WHERE character_id=?;");
+	stmt->setUInt(1, characterId);
+	stmt->execute();
+
+	stmt = CreatePreppedStmtUnique("DELETE FROM mail WHERE receiver_id=?;");
+	stmt->setUInt(1, characterId);
+	stmt->execute();
+
+	stmt = CreatePreppedStmtUnique("DELETE FROM charinfo WHERE id=? LIMIT 1;");
+	stmt->setUInt(1, characterId);
+	stmt->execute();
 }
 
 void MySQLDatabase::SetCharacterName(const uint32_t characterId, const std::string_view name) {
@@ -542,7 +528,7 @@ std::optional<PetNameInfo> MySQLDatabase::GetPetNameInfo(const LWOOBJID& petId) 
 	return toReturn;
 }
 
-std::optional<PropertyInfo> MySQLDatabase::GetPropertyInfo(const uint32_t templateId, const uint32_t cloneId) {
+std::optional<PropertyInfo> MySQLDatabase::GetPropertyInfo(const uint32_t templateId, const LWOCLONEID cloneId) {
 	auto propertyLookup = CreatePreppedStmtUnique(
 		"SELECT id, owner_id, clone_id, name, description, privacy_option, rejection_reason, last_updated, time_claimed, reputation, mod_approved FROM properties WHERE template_id = ? AND clone_id = ?;");
 
@@ -649,7 +635,11 @@ void MySQLDatabase::InsertNewPropertyModel(const LWOOBJID& propertyId, const Dat
 
 	stmt->setUInt64(1, model.id);
 	stmt->setUInt64(2, propertyId);
-	stmt->setNull(3, sql::DataType::BIGINT);
+
+	model.ugcId == 0
+	? stmt->setNull(3, sql::DataType::BIGINT)
+	: stmt->setUInt(3, model.ugcId);
+
 	stmt->setUInt(4, static_cast<uint32_t>(model.lot));
 	stmt->setFloat(5, model.position.x);
 	stmt->setFloat(6, model.position.y);
@@ -687,7 +677,7 @@ void MySQLDatabase::UpdateModelPositionRotation(const LWOOBJID& propertyId, cons
 
 void MySQLDatabase::RemoveModel(const LWOOBJID& modelId) {
 	auto stmt = CreatePreppedStmtUnique("DELETE FROM properties_contents WHERE id = ?;");
-	stmt->setUInt(1, modelId);
+	stmt->setUInt64(1, modelId);
 	stmt->execute();
 }
 
@@ -783,4 +773,20 @@ void MySQLDatabase::InsertNewMail(const DatabaseStructs::MailInsert& mail) {
 	stmt->setInt(10, 0);
 	stmt->setInt(11, mail.attachmentCount);
 	stmt->execute();
+}
+void MySQLDatabase::InsertNewUgcModel(
+	std::istringstream& sd0Data, // cant be const sad
+	const uint32_t blueprintId,
+	const uint32_t accountId,
+	const uint32_t characterId) {
+	auto ugcs = CreatePreppedStmtUnique("INSERT INTO `ugc`(`id`, `account_id`, `character_id`, `is_optimized`, `lxfml`, `bake_ao`, `filename`) VALUES (?,?,?,?,?,?,?)");
+	ugcs->setUInt(1, blueprintId);
+	ugcs->setInt(2, accountId);
+	ugcs->setInt(3, characterId);
+	ugcs->setInt(4, 0);
+
+	ugcs->setBlob(5, &sd0Data);
+	ugcs->setBoolean(6, false);
+	ugcs->setString(7, "weedeater.lxfml");
+	ugcs->execute();
 }
