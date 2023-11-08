@@ -817,33 +817,25 @@ void SlashCommandHandler::HandleChatCommand(const std::u16string& command, Entit
 	if (chatCommand == "mailitem" && entity->GetGMLevel() >= eGameMasterLevel::MODERATOR && args.size() >= 2) {
 		const auto& playerName = args[0];
 
-		sql::PreparedStatement* stmt = Database::Get()->CreatePreppedStmt("SELECT id from charinfo WHERE name=? LIMIT 1;");
-		stmt->setString(1, playerName);
-		sql::ResultSet* res = stmt->executeQuery();
+		auto playerInfo = Database::Get()->DoesCharacterExist(playerName);
+
 		uint32_t receiverID = 0;
-
-		if (res->rowsCount() > 0) {
-			while (res->next()) receiverID = res->getUInt(1);
-		}
-
-		delete stmt;
-		delete res;
-
-		if (receiverID == 0) {
+		if (!playerInfo) {
 			ChatPackets::SendSystemMessage(sysAddr, u"Failed to find that player");
 
 			return;
 		}
 
-		uint32_t lot;
+		receiverID = playerInfo.value();
+
+		LOT lot;
 
 		if (!GeneralUtils::TryParse(args[1], lot)) {
 			ChatPackets::SendSystemMessage(sysAddr, u"Invalid item lot.");
 			return;
 		}
 
-		uint64_t currentTime = time(NULL);
-		DatabaseStructs::MailInsert mailInsert;
+		DatabaseStructs::MailInfo mailInsert;
 		mailInsert.senderId = entity->GetObjectID();
 		mailInsert.senderUsername = "Darkflame Universe";
 		mailInsert.receiverId = receiverID;
@@ -852,8 +844,8 @@ void SlashCommandHandler::HandleChatCommand(const std::u16string& command, Entit
 		mailInsert.body = "This is a replacement item for one you lost.";
 		mailInsert.itemID = LWOOBJID_EMPTY;
 		mailInsert.itemLOT = lot;
-		mailInsert.subkey = LWOOBJID_EMPTY;
-		mailInsert.attachmentCount = 1;
+		mailInsert.itemSubkey = LWOOBJID_EMPTY;
+		mailInsert.itemCount = 1;
 		Database::Get()->InsertNewMail(mailInsert);
 
 		ChatPackets::SendSystemMessage(sysAddr, u"Mail sent");
