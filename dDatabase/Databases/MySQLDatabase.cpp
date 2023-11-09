@@ -957,3 +957,15 @@ void MySQLDatabase::UpdatePersistentId(const uint32_t newId) {
 	stmt->setUInt(1, newId);
 	stmt->executeUpdate();
 }
+
+std::optional<uint32_t> MySQLDatabase::GetDonationTotal(const uint32_t activityId) {
+	auto query = CreatePreppedStmtUnique("SELECT SUM(primaryScore) as donation_total FROM leaderboard WHERE game_id = ?;");
+	query->setInt(1, activityId);
+	auto donation_total = ExecuteQueryUnique(query);
+
+	if (!donation_total->next()) {
+		return std::nullopt;
+	}
+
+	return donation_total->getUInt("donation_total");
+}

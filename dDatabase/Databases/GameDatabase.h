@@ -106,6 +106,7 @@ public:
 	virtual std::optional<uint32_t> GetCurrentPersistentId() = 0;
 	virtual void InsertDefaultPersistentId() = 0;
 	virtual void UpdatePersistentId(const uint32_t id) = 0;
+	virtual std::optional<uint32_t> GetDonationTotal(const uint32_t activityId) = 0;
 };
 
 #endif  //!__GAMEDATABASE__H__

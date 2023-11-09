@@ -109,6 +109,7 @@ public:
 	std::optional<uint32_t> GetCurrentPersistentId() override;
 	void InsertDefaultPersistentId() override;
 	void UpdatePersistentId(const uint32_t id) override;
+	std::optional<uint32_t> GetDonationTotal(const uint32_t activityId) override;
 private:
 	std::unique_ptr<sql::PreparedStatement> CreatePreppedStmtUnique(const std::string& query);
 
