@@ -103,6 +103,9 @@ public:
 	virtual void InsertNewAccount(const std::string_view username, const std::string_view bcryptpassword) = 0;
 	virtual void SetMasterIp(const std::string_view ip, const uint32_t port) = 0;
 	virtual std::optional<uint32_t> GetAccountId(const std::string_view username) = 0;
+	virtual std::optional<uint32_t> GetCurrentPersistentId() = 0;
+	virtual void InsertDefaultPersistentId() = 0;
+	virtual void UpdatePersistentId(const uint32_t id) = 0;
 };
 
 #endif  //!__GAMEDATABASE__H__

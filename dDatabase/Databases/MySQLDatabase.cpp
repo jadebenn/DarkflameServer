@@ -938,3 +938,22 @@ std::optional<uint32_t> MySQLDatabase::GetAccountId(const std::string_view usern
 
 	return result->getUInt("id");
 }
+
+std::optional<uint32_t> MySQLDatabase::GetCurrentPersistentId() {
+	auto stmt = CreatePreppedStmtUnique("SELECT last_object_id FROM object_id_tracker");
+	auto result = stmt->executeQuery();
+	if (!result->next()) {
+		return std::nullopt;
+	}
+	return result->getUInt("last_object_id");
+}
+
+void MySQLDatabase::InsertDefaultPersistentId() {
+	auto stmt = CreatePreppedStmtUnique("INSERT INTO object_id_tracker VALUES (1);")->execute();
+}
+
+void MySQLDatabase::UpdatePersistentId(const uint32_t newId) {
+	auto stmt = CreatePreppedStmtUnique("UPDATE object_id_tracker SET last_object_id = ?;");
+	stmt->setUInt(1, newId);
+	stmt->executeUpdate();
+}

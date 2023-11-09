@@ -106,6 +106,9 @@ public:
 	void InsertNewAccount(const std::string_view username, const std::string_view bcryptpassword) override;
 	void SetMasterIp(const std::string_view ip, const uint32_t port) override;
 	std::optional<uint32_t> GetAccountId(const std::string_view username) override;
+	std::optional<uint32_t> GetCurrentPersistentId() override;
+	void InsertDefaultPersistentId() override;
+	void UpdatePersistentId(const uint32_t id) override;
 private:
 	std::unique_ptr<sql::PreparedStatement> CreatePreppedStmtUnique(const std::string& query);
 
