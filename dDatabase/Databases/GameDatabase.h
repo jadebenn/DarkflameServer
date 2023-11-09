@@ -36,6 +36,7 @@ public:
 	virtual bool IsMigrationRun(const std::string_view str) = 0;
 	virtual void InsertMigration(const std::string_view str) = 0;
 	virtual std::optional<DatabaseStructs::CharacterInfo> GetCharacterInfo(const uint32_t charId) = 0;
+	virtual std::optional<DatabaseStructs::CharacterInfo> GetCharacterInfo(const std::string_view name) = 0;
 	virtual std::string GetCharacterXml(const uint32_t charId) = 0;
 	virtual void UpdateCharacterXml(const uint32_t charId, const std::string_view lxfml) = 0;
 	virtual std::optional<DatabaseStructs::UserInfo> GetUserInfo(const std::string_view username) = 0;
@@ -95,6 +96,9 @@ public:
 	virtual void MarkMailRead(const uint64_t mailId) = 0;
 	virtual void DeleteMail(const uint64_t mailId) = 0;
 	virtual void ClaimMailItem(const uint64_t mailId) = 0;
+	virtual void InsertSlashCommandUsage(const std::string_view command, const uint32_t characterId) = 0;
+	virtual void UpdateAccountUnmuteTime(const uint32_t accountId, const uint64_t timeToUnmute) = 0;
+	virtual void UpdateAccountBan(const uint32_t accountId, const bool banned) = 0;
 };
 
 #endif  //!__GAMEDATABASE__H__

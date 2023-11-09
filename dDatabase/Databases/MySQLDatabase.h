@@ -39,7 +39,8 @@ public:
 	void CreateMigrationHistoryTable() override;
 	bool IsMigrationRun(const std::string_view str) override;
 	void InsertMigration(const std::string_view str) override;
-	std::optional<DatabaseStructs::CharacterInfo> GetCharacterInfo(const uint32_t accountId) override;
+	std::optional<DatabaseStructs::CharacterInfo> GetCharacterInfo(const uint32_t charId) override;
+	std::optional<DatabaseStructs::CharacterInfo> GetCharacterInfo(const std::string_view charId) override;
 	std::string GetCharacterXml(const uint32_t accountId) override;
 	void UpdateCharacterXml(const uint32_t accountId, const std::string_view lxfml) override;
 	std::optional<DatabaseStructs::UserInfo> GetUserInfo(const std::string_view username) override;
@@ -98,6 +99,9 @@ public:
 	void MarkMailRead(const uint64_t mailId) override;
 	void DeleteMail(const uint64_t mailId) override;
 	void ClaimMailItem(const uint64_t mailId) override;
+	void InsertSlashCommandUsage(const std::string_view command, const uint32_t characterId) override;
+	void UpdateAccountUnmuteTime(const uint32_t accountId, const uint64_t timeToUnmute) override;
+	void UpdateAccountBan(const uint32_t accountId, const bool banned) override;
 private:
 	std::unique_ptr<sql::PreparedStatement> CreatePreppedStmtUnique(const std::string& query);
 

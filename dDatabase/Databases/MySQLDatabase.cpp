@@ -339,6 +339,22 @@ std::optional<CharacterInfo> MySQLDatabase::GetCharacterInfo(const uint32_t char
 	return toReturn;
 }
 
+std::optional<CharacterInfo> MySQLDatabase::GetCharacterInfo(const std::string_view name) {
+	auto stmt = CreatePreppedStmtUnique("SELECT id, account_id FROM charinfo WHERE id = ? LIMIT 1;");
+	stmt->setString(1, name.data());
+	auto result = ExecuteQueryUnique(stmt);
+
+	if (!result->next()) {
+		return std::nullopt;
+	}
+
+	CharacterInfo toReturn;
+	toReturn.id = result->getUInt("id");
+	toReturn.accountId = result->getUInt("account_id");
+
+	return toReturn;
+}
+
 std::string MySQLDatabase::GetCharacterXml(const uint32_t charId) {
 	auto stmt = CreatePreppedStmtUnique("SELECT xml_data FROM charxml WHERE id = ? LIMIT 1;");
 	stmt->setUInt(1, charId);
@@ -863,4 +879,25 @@ void MySQLDatabase::ClaimMailItem(const uint64_t mailId) {
 	auto stmt = CreatePreppedStmtUnique("UPDATE mail SET attachment_lot=0 WHERE id=? LIMIT 1;");
 	stmt->setUInt64(1, mailId);
 	stmt->executeUpdate();
+}
+
+void MySQLDatabase::InsertSlashCommandUsage(const std::string_view command, const uint32_t characterId) {
+	auto stmt = CreatePreppedStmtUnique("INSERT INTO command_log (character_id, command) VALUES (?, ?);");
+	stmt->setUInt(1, characterId);
+	stmt->setString(2, command.data());
+	stmt->execute();
+}
+
+void MySQLDatabase::UpdateAccountUnmuteTime(const uint32_t accountId, const uint64_t timeToUnmute) {
+	auto userUpdate = CreatePreppedStmtUnique("UPDATE accounts SET mute_expire = ? WHERE id = ?;");
+	userUpdate->setUInt64(1, timeToUnmute);
+	userUpdate->setUInt(2, accountId);
+	userUpdate->executeUpdate();
+}
+
+void MySQLDatabase::UpdateAccountBan(const uint32_t accountId, const bool banned) {
+	auto userUpdate = CreatePreppedStmtUnique("UPDATE accounts SET banned = ? WHERE id = ?;");
+	userUpdate->setBoolean(1, banned);
+	userUpdate->setUInt(2, accountId);
+	userUpdate->executeUpdate();
 }

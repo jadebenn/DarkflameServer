@@ -45,9 +45,11 @@ namespace DatabaseStructs {
 	struct CharacterInfo {
 		std::string name;
 		std::string pendingName;
-		bool needsRename;
-		LWOCLONEID cloneId;
-		ePermissionMap permissionMap;
+		uint32_t id{};
+		uint32_t accountId{};
+		bool needsRename{};
+		LWOCLONEID cloneId{};
+		ePermissionMap permissionMap{};
 	};
 
 	struct UserInfo {
