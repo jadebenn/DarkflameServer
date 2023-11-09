@@ -239,7 +239,7 @@ void MySQLDatabase::AddFriend(const uint32_t playerAccountId, const uint32_t fri
 	friendUpdate->execute();
 }
 
-std::optional<uint32_t> MySQLDatabase::GetAccountIdFromCharacterName(const std::string& name) {
+std::optional<uint32_t> MySQLDatabase::GetCharacterIdFromCharacterName(const std::string& name) {
 	auto nameQuery(CreatePreppedStmtUnique("SELECT id FROM charinfo WHERE name = ? LIMIT 1;"));
 	nameQuery->setString(1, name);
 	auto result(nameQuery->executeQuery());
@@ -900,4 +900,41 @@ void MySQLDatabase::UpdateAccountBan(const uint32_t accountId, const bool banned
 	userUpdate->setBoolean(1, banned);
 	userUpdate->setUInt(2, accountId);
 	userUpdate->executeUpdate();
+}
+
+void MySQLDatabase::UpdateAccountPassword(const std::string_view bcryptpassword, const uint32_t accountId) {
+	auto userUpdateStatement = CreatePreppedStmtUnique("UPDATE accounts SET password = ? WHERE id = ?;");
+	userUpdateStatement->setString(1, bcryptpassword.data());
+	userUpdateStatement->setUInt(2, accountId);
+	userUpdateStatement->execute();
+}
+
+void MySQLDatabase::InsertNewAccount(const std::string_view username, const std::string_view bcryptpassword) {
+	auto statement = CreatePreppedStmtUnique("INSERT INTO accounts (name, password, gm_level) VALUES (?, ?, ?);");
+	statement->setString(1, username.data());
+	statement->setString(2, bcryptpassword.data());
+	statement->setInt(3, static_cast<int32_t>(eGameMasterLevel::OPERATOR));
+	statement->execute();
+}
+
+void MySQLDatabase::SetMasterIp(const std::string_view ip, const uint32_t port) {
+	// We only want our 1 entry anyways, so we can just delete all and reinsert the one we want
+	// since it would be two queries anyways.
+	CreatePreppedStmtUnique("TRUNCATE TABLE servers;")->execute();
+	auto stmt = CreatePreppedStmtUnique("INSERT INTO `servers` (`name`, `ip`, `port`, `state`, `version`) VALUES ('master', ?, ?, 0, 171022)");
+	stmt->setString(1, ip.data());
+	stmt->setUInt(2, port);
+	stmt->execute();
+}
+
+std::optional<uint32_t> MySQLDatabase::GetAccountId(const std::string_view username) {
+	auto stmt = CreatePreppedStmtUnique("SELECT id FROM accounts WHERE name = ? LIMIT 1;");
+	stmt->setString(1, username.data());
+	auto result = ExecuteQueryUnique(stmt);
+
+	if (!result->next()) {
+		return std::nullopt;
+	}
+
+	return result->getUInt("id");
 }

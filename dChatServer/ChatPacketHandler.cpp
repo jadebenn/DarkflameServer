@@ -300,7 +300,7 @@ void ChatPacketHandler::HandleRemoveFriend(Packet* packet) {
 	//we'll have to query the db here to find the user, since you can delete them while they're offline.
 	//First, we need to find their ID:
 	LWOOBJID friendID = 0;
-	auto friendIdResult = Database::Get()->GetAccountIdFromCharacterName(friendName);
+	auto friendIdResult = Database::Get()->GetCharacterIdFromCharacterName(friendName);
 	if (friendIdResult) {
 		friendID = friendIdResult.value();
 	}

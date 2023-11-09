@@ -26,7 +26,7 @@ public:
 	virtual std::optional<DatabaseStructs::BestFriendStatus> GetBestFriendStatus(const uint32_t playerAccountId, const uint32_t friendAccountId) = 0;
 	virtual void SetBestFriendStatus(const uint32_t playerAccountId, const uint32_t friendAccountId, const uint32_t bestFriendStatus) = 0;
 	virtual void AddFriend(const uint32_t playerAccountId, const uint32_t friendAccountId) = 0;
-	virtual std::optional<uint32_t> GetAccountIdFromCharacterName(const std::string& name) = 0;
+	virtual std::optional<uint32_t> GetCharacterIdFromCharacterName(const std::string& name) = 0;
 	virtual void RemoveFriend(const uint32_t playerAccountId, const uint32_t friendAccountId) = 0;
 	virtual void UpdateActivityLog(const uint32_t accountId, const eActivityType activityType, const LWOMAPID mapId) = 0;
 	virtual void DeleteUgcModelData(const LWOOBJID& modelId) = 0;
@@ -99,6 +99,10 @@ public:
 	virtual void InsertSlashCommandUsage(const std::string_view command, const uint32_t characterId) = 0;
 	virtual void UpdateAccountUnmuteTime(const uint32_t accountId, const uint64_t timeToUnmute) = 0;
 	virtual void UpdateAccountBan(const uint32_t accountId, const bool banned) = 0;
+	virtual void UpdateAccountPassword(const std::string_view bcryptpassword, const uint32_t accountId) = 0;
+	virtual void InsertNewAccount(const std::string_view username, const std::string_view bcryptpassword) = 0;
+	virtual void SetMasterIp(const std::string_view ip, const uint32_t port) = 0;
+	virtual std::optional<uint32_t> GetAccountId(const std::string_view username) = 0;
 };
 
 #endif  //!__GAMEDATABASE__H__

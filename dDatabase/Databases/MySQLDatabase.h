@@ -30,7 +30,7 @@ public:
 	std::optional<DatabaseStructs::BestFriendStatus> GetBestFriendStatus(const uint32_t playerAccountId, const uint32_t friendAccountId) override;
 	void SetBestFriendStatus(const uint32_t playerAccountId, const uint32_t friendAccountId, const uint32_t bestFriendStatus) override;
 	void AddFriend(const uint32_t playerAccountId, const uint32_t friendAccountId) override;
-	std::optional<uint32_t> GetAccountIdFromCharacterName(const std::string& name) override;
+	std::optional<uint32_t> GetCharacterIdFromCharacterName(const std::string& name) override;
 	void RemoveFriend(const uint32_t playerAccountId, const uint32_t friendAccountId) override;
 	void UpdateActivityLog(const uint32_t accountId, const eActivityType activityType, const LWOMAPID mapId) override;
 	void DeleteUgcModelData(const LWOOBJID& modelId) override;
@@ -102,6 +102,10 @@ public:
 	void InsertSlashCommandUsage(const std::string_view command, const uint32_t characterId) override;
 	void UpdateAccountUnmuteTime(const uint32_t accountId, const uint64_t timeToUnmute) override;
 	void UpdateAccountBan(const uint32_t accountId, const bool banned) override;
+	void UpdateAccountPassword(const std::string_view bcryptpassword, const uint32_t accountId) override;
+	void InsertNewAccount(const std::string_view username, const std::string_view bcryptpassword) override;
+	void SetMasterIp(const std::string_view ip, const uint32_t port) override;
+	std::optional<uint32_t> GetAccountId(const std::string_view username) override;
 private:
 	std::unique_ptr<sql::PreparedStatement> CreatePreppedStmtUnique(const std::string& query);
 
