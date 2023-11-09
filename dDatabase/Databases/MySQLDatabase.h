@@ -110,6 +110,9 @@ public:
 	void InsertDefaultPersistentId() override;
 	void UpdatePersistentId(const uint32_t id) override;
 	std::optional<uint32_t> GetDonationTotal(const uint32_t activityId) override;
+	std::optional<DatabaseStructs::AccountInfo> GetAccountDetails(const std::string_view name) override;
+	std::optional<bool> IsPlaykeyActive(const uint32_t playkeyId) override;
+	std::vector<DatabaseStructs::UgcModel> GetAllUgcModels(const LWOOBJID& propertyId) override;
 private:
 	std::unique_ptr<sql::PreparedStatement> CreatePreppedStmtUnique(const std::string& query);
 

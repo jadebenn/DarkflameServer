@@ -106,6 +106,14 @@ namespace DatabaseStructs {
 			LWOOBJID itemSubkey{};
 		};
 	};
+
+	struct AccountInfo {
+		std::string bcryptPassword;
+		uint32_t playKeyId{};
+		bool banned{};
+		bool locked{};
+		eGameMasterLevel gmLevel{};
+	};
 };
 
 #endif  //!__DATABASESTRUCTS__H__

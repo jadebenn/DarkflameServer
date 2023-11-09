@@ -295,10 +295,9 @@ std::vector<UgcModel> MySQLDatabase::GetUgcModels() {
 		UgcModel model;
 		model.id = result->getInt64("id");
 
-		// shoutouts mariadb
-		auto blob = result->getBlob("lxfml");
+		// blob is owned by the query, so we need to do a deep copy :/
+		std::unique_ptr<std::istream> blob(result->getBlob("lxfml"));
 		model.lxfmlData << blob->rdbuf();
-		delete blob;
 		models.push_back(std::move(model));
 	}
 	return std::move(models);
@@ -968,4 +967,59 @@ std::optional<uint32_t> MySQLDatabase::GetDonationTotal(const uint32_t activityI
 	}
 
 	return donation_total->getUInt("donation_total");
+}
+
+std::optional<AccountInfo> MySQLDatabase::GetAccountDetails(const std::string_view name) {
+	auto stmt = CreatePreppedStmtUnique("SELECT password, banned, locked, play_key_id, gm_level FROM accounts WHERE name=? LIMIT 1;");
+	stmt->setString(1, name.data());
+
+	auto res = ExecuteQueryUnique(stmt);
+
+	if (!res->next()) {
+		return std::nullopt;
+	}
+
+	AccountInfo toReturn;
+
+	toReturn.bcryptPassword = res->getString("password").c_str();
+	toReturn.banned = res->getBoolean("banned");
+	toReturn.locked = res->getBoolean("locked");
+	toReturn.playKeyId = res->getUInt("play_key_id");
+	toReturn.gmLevel = static_cast<eGameMasterLevel>(res->getInt("gm_level"));
+
+	return toReturn;
+}
+
+std::optional<bool> MySQLDatabase::IsPlaykeyActive(const uint32_t playkeyId) {
+	auto keyCheckStmt = CreatePreppedStmtUnique("SELECT active FROM `play_keys` WHERE id=?");
+	keyCheckStmt->setUInt(1, playkeyId);
+	auto keyCheckRes = ExecuteQueryUnique(keyCheckStmt);
+
+	if (!keyCheckRes->next()) {
+		return std::nullopt;
+	}
+
+	return keyCheckRes->getBoolean("active");
+}
+
+std::vector<UgcModel> MySQLDatabase::GetAllUgcModels(const LWOOBJID& propertyId) {
+	auto stmt = CreatePreppedStmtUnique(
+		"SELECT lxfml, u.id FROM ugc AS u JOIN properties_contents AS pc ON u.id = pc.ugc_id WHERE lot = 14 AND property_id = ? AND pc.ugc_id IS NOT NULL;"
+	);
+	stmt->setUInt64(1, propertyId);
+	auto result = ExecuteQueryUnique(stmt);
+	
+	std::vector<UgcModel> toReturn;
+
+	while (result->next()) {
+		UgcModel model;
+
+		// blob is owned by the query, so we need to do a deep copy :/
+		std::unique_ptr<std::istream> blob(result->getBlob("lxfml"));
+		model.lxfmlData << blob->rdbuf();
+		model.id = result->getUInt64("id");
+		toReturn.push_back(std::move(model));
+	}
+
+	return toReturn; // RVO; allow compiler to elide the return.
 }

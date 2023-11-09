@@ -107,6 +107,11 @@ public:
 	virtual void InsertDefaultPersistentId() = 0;
 	virtual void UpdatePersistentId(const uint32_t id) = 0;
 	virtual std::optional<uint32_t> GetDonationTotal(const uint32_t activityId) = 0;
+	virtual std::optional<DatabaseStructs::AccountInfo> GetAccountDetails(const std::string_view name) = 0;
+
+	// optional to show if the playkey even existed, bool to show if it was active
+	virtual std::optional<bool> IsPlaykeyActive(const uint32_t playkeyId) = 0;
+	virtual std::vector<DatabaseStructs::UgcModel> GetAllUgcModels(const LWOOBJID& propertyId) = 0;
 };
 
 #endif  //!__GAMEDATABASE__H__
