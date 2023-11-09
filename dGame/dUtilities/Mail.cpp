@@ -84,7 +84,7 @@ void Mail::SendMail(const LWOOBJID sender, const std::string& senderName, LWOOBJ
 	mailInsert.senderId = sender;
 	mailInsert.receiverId = recipient;
 	mailInsert.itemCount = attachmentCount;
-	mailInsert.itemID = 0;
+	mailInsert.itemID = LWOOBJID_EMPTY;
 	mailInsert.itemLOT = attachment;
 	mailInsert.itemSubkey = LWOOBJID_EMPTY;
 

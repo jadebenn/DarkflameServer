@@ -98,7 +98,7 @@ namespace DatabaseStructs {
 		uint64_t timeSent{};
 		bool wasRead{};
 		struct {
-			uint32_t itemID{};
+			LWOOBJID itemID{};
 			int32_t itemCount{};
 			LOT itemLOT{};
 			LWOOBJID itemSubkey{};
