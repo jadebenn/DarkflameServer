@@ -8,7 +8,6 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <unordered_map>
 
 // CPPLinq
 #ifdef _WIN32
