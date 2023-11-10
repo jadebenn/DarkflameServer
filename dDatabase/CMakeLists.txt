@@ -9,10 +9,10 @@ foreach(file ${DDATABASE_TABLES_SOURCES})
 	set(DDATABASE_SOURCES ${DDATABASE_SOURCES} "Tables/${file}")
 endforeach()
 
-add_subdirectory(Databases)
+add_subdirectory(GameDatabase)
 
-foreach(file ${DDATABASE_DATABASES_SOURCES})
-	set(DDATABASE_SOURCES ${DDATABASE_SOURCES} "Databases/${file}")
+foreach(file ${DDATABASE_GAMEDATABASE_SOURCES})
+	set(DDATABASE_SOURCES ${DDATABASE_SOURCES} "GameDatabase/${file}")
 endforeach()
 
 add_library(dDatabase STATIC ${DDATABASE_SOURCES})
