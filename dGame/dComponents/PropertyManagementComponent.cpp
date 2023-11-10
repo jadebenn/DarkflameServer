@@ -601,7 +601,7 @@ void PropertyManagementComponent::Save() {
 		const auto rotation = entity->GetRotation();
 
 		if (std::find(present.begin(), present.end(), id) == present.end()) {
-			DatabaseStructs::DatabaseModel model;
+			IPropertyContents::Model model;
 			model.id = id;
 			model.lot = entity->GetLOT();
 			model.position = position;

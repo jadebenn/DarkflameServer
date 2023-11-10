@@ -1,0 +1,22 @@
+set(DDATABASES_DATABASES_MYSQL_TABLES_SOURCES
+	"MySQLCommandLog.cpp"
+	"MySQLPlayerCheatDetections.cpp"
+	"MySQLMail.cpp"
+	"MySQLLeaderboard.cpp"
+	"MySQLObjectIdTracker.cpp"
+	"MySQLPlayKeys.cpp"
+	"MySQLServers.cpp"
+	"MySQLBugReports.cpp"
+	"MySQLPropertyContents.cpp"
+	"MySQLProperty.cpp"
+	"MySQLPetNames.cpp"
+	"MySQLCharXml.cpp"
+	"MySQLMigrationHistory.cpp"
+	"MySQLUgc.cpp"
+	"MySQLFriends.cpp"
+	"MySQLCharInfo.cpp"
+	"MySQLAccounts.cpp"
+	"MySQLActivityLog.cpp"
+	PARENT_SCOPE
+)
+

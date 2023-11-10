@@ -74,6 +74,7 @@
 #include "ZCompression.h"
 #include "EntityManager.h"
 #include "CheatDetection.h"
+#include "eGameMasterLevel.h"
 
 namespace Game {
 	Logger* logger = nullptr;

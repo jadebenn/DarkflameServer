@@ -27,6 +27,7 @@
 #include "eConnectionType.h"
 #include "eServerMessageType.h"
 #include "eMasterMessageType.h"
+#include "eGameMasterLevel.h"
 
 void AuthPackets::HandleHandshake(dServer* server, Packet* packet) {
 	RakNet::BitStream inStream(packet->data, packet->length, false);

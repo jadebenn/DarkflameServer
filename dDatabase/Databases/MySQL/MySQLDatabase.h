@@ -33,16 +33,16 @@ public:
 	void ExecuteCustomQuery(const std::string_view query) override;
 
 	// Overloaded queries
-	std::optional<DatabaseStructs::MasterInfo> GetMasterInfo() override;
+	std::optional<IServers::MasterInfo> GetMasterInfo() override;
 
-	std::optional<DatabaseStructs::ApprovedNames> GetApprovedCharacterNames() override;
+	std::vector<std::string> GetApprovedCharacterNames() override;
 
 	std::vector<FriendData> GetFriendsList(uint32_t charID) override;
 
 	// No optional needed here, since if we did that, we'd return a bool of a bool in essenece.
 	// Just return true if and only if the character name exists.
 	std::optional<uint32_t> DoesCharacterExist(const std::string_view name) override;
-	std::optional<DatabaseStructs::BestFriendStatus> GetBestFriendStatus(const uint32_t playerCharacterId, const uint32_t friendCharacterId) override;
+	std::optional<IFriends::BestFriendStatus> GetBestFriendStatus(const uint32_t playerCharacterId, const uint32_t friendCharacterId) override;
 	void SetBestFriendStatus(const uint32_t playerAccountId, const uint32_t friendAccountId, const uint32_t bestFriendStatus) override;
 	void AddFriend(const uint32_t playerAccountId, const uint32_t friendAccountId) override;
 	std::optional<uint32_t> GetCharacterIdFromCharacterName(const std::string_view name) override;
@@ -50,15 +50,15 @@ public:
 	void UpdateActivityLog(const uint32_t accountId, const eActivityType activityType, const LWOMAPID mapId) override;
 	void DeleteUgcModelData(const LWOOBJID& modelId) override;
 	void UpdateUgcModelData(const LWOOBJID& modelId, std::istringstream& lxfml) override;
-	std::vector<DatabaseStructs::UgcModel> GetUgcModels() override;
+	std::vector<IUgc::Model> GetUgcModels() override;
 	void CreateMigrationHistoryTable() override;
 	bool IsMigrationRun(const std::string_view str) override;
 	void InsertMigration(const std::string_view str) override;
-	std::optional<DatabaseStructs::CharacterInfo> GetCharacterInfo(const uint32_t charId) override;
-	std::optional<DatabaseStructs::CharacterInfo> GetCharacterInfo(const std::string_view charId) override;
+	std::optional<ICharInfo::Info> GetCharacterInfo(const uint32_t charId) override;
+	std::optional<ICharInfo::Info> GetCharacterInfo(const std::string_view charId) override;
 	std::string GetCharacterXml(const uint32_t accountId) override;
 	void UpdateCharacterXml(const uint32_t accountId, const std::string_view lxfml) override;
-	std::optional<DatabaseStructs::AccountInfo> GetAccountInfo(const std::string_view username) override;
+	std::optional<IAccounts::Info> GetAccountInfo(const std::string_view username) override;
 	void InsertNewCharacter(const uint32_t accountId, const uint32_t characterId, const std::string_view name, const std::string_view pendingName) override;
 	void InsertCharacterXml(const uint32_t accountId, const std::string_view lxfml) override;
 	std::vector<uint32_t> GetCharacterIds(uint32_t accountId) override;
@@ -67,8 +67,8 @@ public:
 	void SetPendingCharacterName(const uint32_t characterId, const std::string_view name) override;
 	void UpdateLastLoggedInCharacter(const uint32_t characterId) override;
 	void SetPetNameModerationStatus(const LWOOBJID& petId, const std::string_view name, const int32_t approvalStatus) override;
-	std::optional<DatabaseStructs::PetNameInfo> GetPetNameInfo(const LWOOBJID& petId) override;
-	std::optional<DatabaseStructs::PropertyInfo> GetPropertyInfo(const LWOMAPID mapId, const LWOCLONEID cloneId) override;
+	std::optional<IPetNames::Info> GetPetNameInfo(const LWOOBJID& petId) override;
+	std::optional<IProperty::PropertyInfo> GetPropertyInfo(const LWOMAPID mapId, const LWOCLONEID cloneId) override;
 	void UpdatePropertyModerationInfo(const LWOOBJID& id, const uint32_t privacyOption, const std::string_view rejectionReason, const uint32_t modApproved) override;
 	void UpdatePropertyDetails(const LWOOBJID& id, const std::string_view name, const std::string_view description) override;
 	void InsertNewProperty(
@@ -79,9 +79,9 @@ public:
 		const std::string_view name,
 		const std::string_view description,
 		const uint32_t zoneId) override;
-	std::vector<DatabaseStructs::DatabaseModel> GetPropertyModels(const LWOOBJID& propertyId) override;
+	std::vector<IPropertyContents::Model> GetPropertyModels(const LWOOBJID& propertyId) override;
 	void RemoveUnreferencedUgcModels() override;
-	void InsertNewPropertyModel(const LWOOBJID& propertyId, const DatabaseStructs::DatabaseModel& model, const std::string_view name) override;
+	void InsertNewPropertyModel(const LWOOBJID& propertyId, const IPropertyContents::Model& model, const std::string_view name) override;
 	void UpdateModelPositionRotation(const LWOOBJID& propertyId, const NiPoint3& position, const NiQuaternion& rotation) override;
 	void RemoveModel(const LWOOBJID& modelId) override;
 	void UpdatePerformanceCost(const LWOZONEID& zoneId, const float performanceCost) override;
@@ -96,14 +96,14 @@ public:
 		const std::string_view username,
 		const std::string_view systemAddress,
 		const std::string_view extraMessage) override;
-	void InsertNewMail(const DatabaseStructs::MailInfo& mail) override;
+	void InsertNewMail(const IMail::MailInfo& mail) override;
 	void InsertNewUgcModel(
 		std::istringstream& sd0Data,
 		const uint32_t blueprintId,
 		const uint32_t accountId,
 		const uint32_t characterId) override;
-	std::vector<DatabaseStructs::MailInfo> GetMailForPlayer(const uint32_t numberOfMail, const uint32_t characterId) override;
-	std::optional<DatabaseStructs::MailInfo> GetMail(const uint64_t mailId) override;
+	std::vector<IMail::MailInfo> GetMailForPlayer(const uint32_t numberOfMail, const uint32_t characterId) override;
+	std::optional<IMail::MailInfo> GetMail(const uint64_t mailId) override;
 	uint32_t GetUnreadMailCount(const uint32_t characterId) override;
 	void MarkMailRead(const uint64_t mailId) override;
 	void DeleteMail(const uint64_t mailId) override;
@@ -119,7 +119,7 @@ public:
 	void UpdatePersistentId(const uint32_t id) override;
 	std::optional<uint32_t> GetDonationTotal(const uint32_t activityId) override;
 	std::optional<bool> IsPlaykeyActive(const uint32_t playkeyId) override;
-	std::vector<DatabaseStructs::UgcModel> GetAllUgcModels(const LWOOBJID& propertyId) override;
+	std::vector<IUgc::Model> GetAllUgcModels(const LWOOBJID& propertyId) override;
 private:
 	template<typename... Args>
 	inline std::unique_ptr<sql::ResultSet> ExecuteSelect(const std::string& query, Args&&... args) {

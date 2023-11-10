@@ -2597,7 +2597,7 @@ void GameMessages::HandleBBBSaveRequest(RakNet::BitStream* inStream, Entity* ent
 		Database::Get()->InsertNewUgcModel(sd0DataStream, blueprintIDSmall, entity->GetParentUser()->GetAccountID(), entity->GetCharacter()->GetID());
 
 		//Insert into the db as a BBB model:
-		DatabaseStructs::DatabaseModel model;
+		IPropertyContents::Model model;
 		model.id = newIDL;
 		model.ugcId = blueprintIDSmall;
 		model.position = NiPoint3::ZERO;

@@ -76,7 +76,7 @@ void Mail::SendMail(const LWOOBJID sender, const std::string& senderName, const 
 void Mail::SendMail(const LWOOBJID sender, const std::string& senderName, LWOOBJID recipient,
 	const std::string& recipientName, const std::string& subject, const std::string& body, const LOT attachment,
 	const uint16_t attachmentCount, const SystemAddress& sysAddr) {
-	DatabaseStructs::MailInfo mailInsert;
+	IMail::MailInfo mailInsert;
 	mailInsert.senderUsername = senderName;
 	mailInsert.recipient = recipientName;
 	mailInsert.subject = subject;
@@ -229,7 +229,7 @@ void Mail::HandleSendMail(RakNet::BitStream* packet, const SystemAddress& sysAdd
 		Mail::SendSendResponse(sysAddr, Mail::MailSendResponse::CannotMailSelf);
 		return;
 	} else {
-		DatabaseStructs::MailInfo mailInsert;
+		IMail::MailInfo mailInsert;
 		mailInsert.senderUsername = character->GetName();
 		mailInsert.recipient = recipient;
 		mailInsert.subject = subject;

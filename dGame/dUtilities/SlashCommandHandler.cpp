@@ -831,7 +831,7 @@ void SlashCommandHandler::HandleChatCommand(const std::u16string& command, Entit
 			return;
 		}
 
-		DatabaseStructs::MailInfo mailInsert;
+		IMail::MailInfo mailInsert;
 		mailInsert.senderId = entity->GetObjectID();
 		mailInsert.senderUsername = "Darkflame Universe";
 		mailInsert.receiverId = receiverID;
