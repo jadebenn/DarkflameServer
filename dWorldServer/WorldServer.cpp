@@ -1074,28 +1074,16 @@ void HandlePacket(Packet* packet) {
 				if (g_CloneID != 0) {
 					const auto& worldId = Game::zoneManager->GetZone()->GetZoneID();
 
-					const auto zoneId = Game::server->GetZoneID();
+					const auto zoneId = worldId.GetMapID();
 					const auto cloneId = g_CloneID;
 
-					auto query = CDClientDatabase::CreatePreppedStmt(
-						"SELECT id FROM PropertyTemplate WHERE mapID = ?;");
-					query.bind(1, (int)zoneId);
-
-					auto result = query.execQuery();
-
-					if (result.eof() || result.fieldIsNull(0)) {
-						LOG("No property templates found for zone %d, not sending BBB", zoneId);
-						goto noBBB;
-					}
-
 					//Check for BBB models:
-					int32_t templateId = result.getIntField(0);
-					auto propertyInfo = Database::Get()->GetPropertyInfo(templateId, cloneId);
+					auto propertyInfo = Database::Get()->GetPropertyInfo(zoneId, cloneId);
 
 					LWOOBJID propertyId = LWOOBJID_EMPTY;
 					if (propertyInfo) propertyId = propertyInfo->id;
 					else {
-						LOG("Couldn't find property ID for template %i, clone %i", templateId, cloneId);
+						LOG("Couldn't find property ID for zone %i, clone %i", zoneId, cloneId);
 						goto noBBB;
 					}
 					for (auto& bbbModel : Database::Get()->GetAllUgcModels(propertyId)) {
