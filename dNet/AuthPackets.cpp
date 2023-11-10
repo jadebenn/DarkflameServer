@@ -90,7 +90,7 @@ void AuthPackets::HandleLoginRequest(dServer* server, Packet* packet) {
 		//Check if the play key is _valid_:
 		auto playKeyStatus = Database::Get()->IsPlaykeyActive(accountInfo->playKeyId);
 
-		if (!playKeyStatus && accountInfo->gmLevel == eGameMasterLevel::CIVILIAN) {
+		if (!playKeyStatus || accountInfo->gmLevel == eGameMasterLevel::CIVILIAN) {
 			AuthPackets::SendLoginResponse(server, packet->systemAddress, eLoginResponse::PERMISSIONS_NOT_HIGH_ENOUGH, "Your account doesn't have a play key associated with it!", "", 2001, username);
 			return;
 		}
