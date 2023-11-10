@@ -23,11 +23,11 @@ public:
 	virtual std::optional<DatabaseStructs::MasterInfo> GetMasterInfo() = 0;
 	virtual std::optional<DatabaseStructs::ApprovedNames> GetApprovedCharacterNames() = 0;
 	virtual std::optional<DatabaseStructs::FriendsList> GetFriendsList(const uint32_t charID) = 0;
-	virtual std::optional<uint32_t> DoesCharacterExist(const std::string& name) = 0;
+	virtual std::optional<uint32_t> DoesCharacterExist(const std::string_view name) = 0;
 	virtual std::optional<DatabaseStructs::BestFriendStatus> GetBestFriendStatus(const uint32_t playerAccountId, const uint32_t friendAccountId) = 0;
 	virtual void SetBestFriendStatus(const uint32_t playerAccountId, const uint32_t friendAccountId, const uint32_t bestFriendStatus) = 0;
 	virtual void AddFriend(const uint32_t playerAccountId, const uint32_t friendAccountId) = 0;
-	virtual std::optional<uint32_t> GetCharacterIdFromCharacterName(const std::string& name) = 0;
+	virtual std::optional<uint32_t> GetCharacterIdFromCharacterName(const std::string_view name) = 0;
 	virtual void RemoveFriend(const uint32_t playerAccountId, const uint32_t friendAccountId) = 0;
 	virtual void UpdateActivityLog(const uint32_t accountId, const eActivityType activityType, const LWOMAPID mapId) = 0;
 	virtual void DeleteUgcModelData(const LWOOBJID& modelId) = 0;

@@ -6,6 +6,21 @@
 
 #include "GameDatabase.h"
 
+
+
+typedef std::unique_ptr<sql::PreparedStatement>& UniquePreppedStmtRef;
+
+template<typename ParamType>
+inline void SetParam(UniquePreppedStmtRef stmt, const int index, const ParamType param);
+
+template<typename... Args>
+void SetParams(UniquePreppedStmtRef stmt, Args&&... args) {
+	if constexpr (sizeof...(args) != 0) {
+		int i = 1;
+		(SetParam(stmt, i++, args), ...);
+	}
+}
+
 class MySQLDatabase : public GameDatabase {
 public:
 	void Connect() override;
@@ -26,11 +41,11 @@ public:
 
 	// No optional needed here, since if we did that, we'd return a bool of a bool in essenece.
 	// Just return true if and only if the character name exists.
-	std::optional<uint32_t> DoesCharacterExist(const std::string& name) override;
+	std::optional<uint32_t> DoesCharacterExist(const std::string_view name) override;
 	std::optional<DatabaseStructs::BestFriendStatus> GetBestFriendStatus(const uint32_t playerAccountId, const uint32_t friendAccountId) override;
 	void SetBestFriendStatus(const uint32_t playerAccountId, const uint32_t friendAccountId, const uint32_t bestFriendStatus) override;
 	void AddFriend(const uint32_t playerAccountId, const uint32_t friendAccountId) override;
-	std::optional<uint32_t> GetCharacterIdFromCharacterName(const std::string& name) override;
+	std::optional<uint32_t> GetCharacterIdFromCharacterName(const std::string_view name) override;
 	void RemoveFriend(const uint32_t playerAccountId, const uint32_t friendAccountId) override;
 	void UpdateActivityLog(const uint32_t accountId, const eActivityType activityType, const LWOMAPID mapId) override;
 	void DeleteUgcModelData(const LWOOBJID& modelId) override;
@@ -116,9 +131,136 @@ public:
 private:
 	std::unique_ptr<sql::PreparedStatement> CreatePreppedStmtUnique(const std::string& query);
 
-	std::unique_ptr<sql::ResultSet> ExecuteQueryUnique(const std::string& query);
-	std::unique_ptr<sql::ResultSet> ExecuteQueryUnique(const std::unique_ptr<sql::PreparedStatement>& query);
+	template<typename... Args>
+	inline std::unique_ptr<sql::ResultSet> ExecuteSelect(const std::string& query, Args&&... args) {
+		std::unique_ptr<sql::PreparedStatement> preppedStmt(CreatePreppedStmt(query));
+		SetParams(preppedStmt, std::forward<Args>(args)...);
+		return std::unique_ptr<sql::ResultSet>(preppedStmt->executeQuery());
+	}
+
+	template<typename... Args>
+	inline void ExecuteDelete(const std::string& query, Args&&... args) {
+		std::unique_ptr<sql::PreparedStatement> preppedStmt(CreatePreppedStmt(query));
+		SetParams(preppedStmt, std::forward<Args>(args)...);
+		preppedStmt->execute();
+	}
+
+	template<typename... Args>
+	inline int32_t ExecuteUpdate(const std::string& query, Args&&... args) {
+		std::unique_ptr<sql::PreparedStatement> preppedStmt(CreatePreppedStmt(query));
+		SetParams(preppedStmt, std::forward<Args>(args)...);
+		return preppedStmt->executeUpdate();
+	}
+
+	template<typename... Args>
+	inline bool ExecuteInsert(const std::string& query, Args&&... args) {
+		std::unique_ptr<sql::PreparedStatement> preppedStmt(CreatePreppedStmt(query));
+		SetParams(preppedStmt, std::forward<Args>(args)...);
+		return preppedStmt->execute();
+	}
 
 };
+
+template<>
+inline void SetParam(UniquePreppedStmtRef stmt, const int index, const std::string_view param) {
+	LOG("%s", param.data());
+	stmt->setString(index, param.data());
+}
+
+template<>
+inline void SetParam(UniquePreppedStmtRef stmt, const int index, const char* param) {
+	LOG("%s", param);
+	stmt->setString(index, param);
+}
+
+template<>
+inline void SetParam(UniquePreppedStmtRef stmt, const int index, const std::string param) {
+	LOG("%s", param.c_str());
+	stmt->setString(index, param.c_str());
+}
+
+template<>
+inline void SetParam(UniquePreppedStmtRef stmt, const int index, const int8_t param) {
+	LOG("%u", param);
+	stmt->setByte(index, param);
+}
+
+template<>
+inline void SetParam(UniquePreppedStmtRef stmt, const int index, const uint8_t param) {
+	LOG("%d", param);
+	stmt->setByte(index, param);
+}
+
+template<>
+inline void SetParam(UniquePreppedStmtRef stmt, const int index, const int16_t param) {
+	LOG("%u", param);
+	stmt->setShort(index, param);
+}
+
+template<>
+inline void SetParam(UniquePreppedStmtRef stmt, const int index, const uint16_t param) {
+	LOG("%d", param);
+	stmt->setShort(index, param);
+}
+
+template<>
+inline void SetParam(UniquePreppedStmtRef stmt, const int index, const uint32_t param) {
+	LOG("%u", param);
+	stmt->setUInt(index, param);
+}
+
+template<>
+inline void SetParam(UniquePreppedStmtRef stmt, const int index, const int32_t param) {
+	LOG("%d", param);
+	stmt->setInt(index, param);
+}
+
+template<>
+inline void SetParam(UniquePreppedStmtRef stmt, const int index, const int64_t param) {
+	LOG("%llu", param);
+	stmt->setInt64(index, param);
+}
+
+template<>
+inline void SetParam(UniquePreppedStmtRef stmt, const int index, const uint64_t param) {
+	LOG("%llu", param);
+	stmt->setUInt64(index, param);
+}
+
+template<>
+inline void SetParam(UniquePreppedStmtRef stmt, const int index, const float param) {
+	LOG("%f", param);
+	stmt->setFloat(index, param);
+}
+
+template<>
+inline void SetParam(UniquePreppedStmtRef stmt, const int index, const double param) {
+	LOG("%f", param);
+	stmt->setDouble(index, param);
+}
+
+template<>
+inline void SetParam(UniquePreppedStmtRef stmt, const int index, const bool param) {
+	LOG("%d", param);
+	stmt->setBoolean(index, param);
+}
+
+template<>
+inline void SetParam(UniquePreppedStmtRef stmt, const int index, const std::istream* param) {
+	LOG("Blob");
+	// This is the one time you will ever see me use const_cast.
+	stmt->setBlob(index, const_cast<std::istream*>(param));
+}
+
+template<>
+inline void SetParam(UniquePreppedStmtRef stmt, const int index, const std::optional<uint32_t> param) {
+	if (param.has_value()) {
+		LOG("%d", param.value());
+		stmt->setInt(index, param.value());
+	} else {
+		LOG("Null");
+		stmt->setNull(index, sql::DataType::SQLNULL);
+	}
+}
 
 #endif  //!__MYSQLDATABASE__H__
