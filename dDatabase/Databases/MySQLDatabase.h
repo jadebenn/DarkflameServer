@@ -24,7 +24,7 @@ void SetParams(UniquePreppedStmtRef stmt, Args&&... args) {
 class MySQLDatabase : public GameDatabase {
 public:
 	void Connect() override;
-	void Destroy(std::string source = "", bool log = true) override;
+	void Destroy(std::string source = "") override;
 
 	sql::PreparedStatement* CreatePreppedStmt(const std::string& query) override;
 	void Commit() override;

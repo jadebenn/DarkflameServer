@@ -8,10 +8,10 @@
 using namespace DatabaseStructs;
 
 namespace {
-	sql::Driver* driver;
-	sql::Connection* con;
-	sql::Properties properties;
 	std::string databaseName;
+	sql::Properties properties;
+	sql::Driver* driver = nullptr;
+	sql::Connection* con = nullptr;
 };
 
 void MySQLDatabase::Connect() {
@@ -52,16 +52,15 @@ void MySQLDatabase::Connect() {
 	con->setSchema(databaseName.c_str());
 }
 
-void MySQLDatabase::Destroy(std::string source, bool log) {
+void MySQLDatabase::Destroy(std::string source) {
 	if (!con) return;
 
-	if (log) {
-		if (source != "") LOG("Destroying MySQL connection from %s!", source.c_str());
-		else LOG("Destroying MySQL connection!");
-	}
+	if (source.empty()) LOG("Destroying MySQL connection!");
+	else LOG("Destroying MySQL connection from %s!", source.c_str());
 
 	con->close();
 	delete con;
+	con = nullptr;
 }
 
 void MySQLDatabase::ExecuteCustomQuery(const std::string_view query) {
