@@ -176,7 +176,7 @@ std::optional<uint32_t> MySQLDatabase::GetCharacterIdFromCharacterName(const std
 		return std::nullopt;
 	}
 
-	return result->getUInt(1);
+	return result->getUInt("id");
 }
 
 std::optional<CharacterInfo> CharInfoFromQueryResult(std::unique_ptr<sql::ResultSet> stmt) {
@@ -246,10 +246,10 @@ void MySQLDatabase::UpdateLastLoggedInCharacter(const uint32_t characterId) {
 
 // friends table
 
-std::optional<FriendsList> MySQLDatabase::GetFriendsList(const uint32_t charId) {
+std::vector<FriendData> MySQLDatabase::GetFriendsList(const uint32_t charId) {
 	auto friendsList = ExecuteSelect(
 		R"QUERY(
-			SELECT fr.requested_player, best_friend, ci.name FROM 
+			SELECT fr.requested_player AS player, best_friend AS bff, ci.name AS name FROM 
 			(
 				SELECT CASE 
 				WHEN player_id = ? THEN friend_id 
@@ -260,31 +260,27 @@ std::optional<FriendsList> MySQLDatabase::GetFriendsList(const uint32_t charId) 
 			WHERE fr.requested_player IS NOT NULL AND fr.requested_player != ?;
 		)QUERY", charId, charId, charId);
 
-	if (!friendsList->next()) {
-		return std::nullopt;
+	std::vector<FriendData> toReturn;
+	toReturn.reserve(friendsList->rowsCount());
+
+	while (friendsList->next()) {
+		FriendData fd;
+		fd.friendID = friendsList->getUInt("player");
+		fd.isBestFriend = friendsList->getInt("bff") == 3; // 0 = friends, 1 = left_requested, 2 = right_requested, 3 = both_accepted - are now bffs
+		fd.friendName = friendsList->getString("name").c_str();
+
+		toReturn.push_back(fd);
 	}
 
-	FriendsList toReturn;
-
-	toReturn.friends.reserve(friendsList->rowsCount());
-
-	do {
-		FriendData fd;
-		fd.friendID = friendsList->getUInt(1);
-		fd.isBestFriend = friendsList->getInt(2) == 3; // 0 = friends, 1 = left_requested, 2 = right_requested, 3 = both_accepted - are now bffs
-		fd.friendName = friendsList->getString(3).c_str();
-
-		toReturn.friends.push_back(fd);
-	} while (friendsList->next());
 	return toReturn;
 }
 
-std::optional<BestFriendStatus> MySQLDatabase::GetBestFriendStatus(const uint32_t playerAccountId, const uint32_t friendAccountId) {
+std::optional<BestFriendStatus> MySQLDatabase::GetBestFriendStatus(const uint32_t playerCharacterId, const uint32_t friendCharacterId) {
 	auto result = ExecuteSelect("SELECT * FROM friends WHERE (player_id = ? AND friend_id = ?) OR (player_id = ? AND friend_id = ?) LIMIT 1;",
-		playerAccountId,
-		friendAccountId,
-		friendAccountId,
-		playerAccountId
+		playerCharacterId,
+		friendCharacterId,
+		friendCharacterId,
+		playerCharacterId
 	);
 
 	if (!result->next()) {
@@ -324,6 +320,44 @@ void MySQLDatabase::RemoveFriend(const uint32_t playerAccountId, const uint32_t 
 
 // ugc table
 
+std::vector<UgcModel> MySQLDatabase::GetAllUgcModels(const LWOOBJID& propertyId) {
+	auto result = ExecuteSelect(
+		"SELECT lxfml, u.id FROM ugc AS u JOIN properties_contents AS pc ON u.id = pc.ugc_id WHERE lot = 14 AND property_id = ? AND pc.ugc_id IS NOT NULL;",
+		propertyId);
+
+	std::vector<UgcModel> toReturn;
+
+	while (result->next()) {
+		UgcModel model;
+
+		// blob is owned by the query, so we need to do a deep copy :/
+		std::unique_ptr<std::istream> blob(result->getBlob("lxfml"));
+		model.lxfmlData << blob->rdbuf();
+		model.id = result->getUInt64("id");
+		toReturn.push_back(std::move(model));
+	}
+
+	return toReturn; // move elision
+}
+
+std::vector<UgcModel> MySQLDatabase::GetUgcModels() {
+	auto result = ExecuteSelect("SELECT id, lxfml FROM ugc;");
+
+	std::vector<UgcModel> models;
+	models.reserve(result->rowsCount());
+	while (result->next()) {
+		UgcModel model;
+		model.id = result->getInt64("id");
+
+		// blob is owned by the query, so we need to do a deep copy :/
+		std::unique_ptr<std::istream> blob(result->getBlob("lxfml"));
+		model.lxfmlData << blob->rdbuf();
+		models.push_back(std::move(model));
+	}
+
+	return models;
+}
+
 void MySQLDatabase::RemoveUnreferencedUgcModels() {
 	ExecuteDelete("DELETE FROM ugc WHERE id NOT IN (SELECT ugc_id FROM properties_contents WHERE ugc_id IS NOT NULL);");
 }
@@ -346,26 +380,6 @@ void MySQLDatabase::InsertNewUgcModel(
 	);
 }
 
-std::vector<UgcModel> MySQLDatabase::GetAllUgcModels(const LWOOBJID& propertyId) {
-	auto result = ExecuteSelect(
-		"SELECT lxfml, u.id FROM ugc AS u JOIN properties_contents AS pc ON u.id = pc.ugc_id WHERE lot = 14 AND property_id = ? AND pc.ugc_id IS NOT NULL;",
-		propertyId);
-
-	std::vector<UgcModel> toReturn;
-
-	while (result->next()) {
-		UgcModel model;
-
-		// blob is owned by the query, so we need to do a deep copy :/
-		std::unique_ptr<std::istream> blob(result->getBlob("lxfml"));
-		model.lxfmlData << blob->rdbuf();
-		model.id = result->getUInt64("id");
-		toReturn.push_back(std::move(model));
-	}
-
-	return toReturn; // move elision
-}
-
 void MySQLDatabase::DeleteUgcModelData(const LWOOBJID& modelId) {
 	ExecuteDelete("DELETE FROM ugc WHERE id = ?;", modelId);
 	ExecuteDelete("DELETE FROM properties_contents WHERE ugc_id = ?;", modelId);
@@ -373,25 +387,7 @@ void MySQLDatabase::DeleteUgcModelData(const LWOOBJID& modelId) {
 
 void MySQLDatabase::UpdateUgcModelData(const LWOOBJID& modelId, std::istringstream& lxfml) {
 	const std::istream stream(lxfml.rdbuf());
-	auto update = ExecuteUpdate("UPDATE ugc SET lxfml = ? WHERE id = ?;", &stream, modelId);
-}
-
-std::vector<UgcModel> MySQLDatabase::GetUgcModels() {
-	auto result = ExecuteSelect("SELECT id, lxfml FROM ugc;");
-
-	std::vector<UgcModel> models;
-	models.reserve(result->rowsCount());
-	while (result->next()) {
-		UgcModel model;
-		model.id = result->getInt64("id");
-
-		// blob is owned by the query, so we need to do a deep copy :/
-		std::unique_ptr<std::istream> blob(result->getBlob("lxfml"));
-		model.lxfmlData << blob->rdbuf();
-		models.push_back(std::move(model));
-	}
-
-	return models;
+	ExecuteUpdate("UPDATE ugc SET lxfml = ? WHERE id = ?;", &stream, modelId);
 }
 
 // migration_history table
@@ -405,7 +401,7 @@ bool MySQLDatabase::IsMigrationRun(const std::string_view str) {
 }
 
 void MySQLDatabase::InsertMigration(const std::string_view str) {
-	auto stmt = ExecuteInsert("INSERT INTO migration_history (name) VALUES (?);", str);
+	ExecuteInsert("INSERT INTO migration_history (name) VALUES (?);", str);
 }
 
 // charxml table
@@ -444,8 +440,9 @@ void MySQLDatabase::DeleteCharacter(const uint32_t characterId) {
 // pet_names table
 
 void MySQLDatabase::SetPetNameModerationStatus(const LWOOBJID& petId, const std::string_view name, const int32_t approvalStatus) {
-	auto stmt = ExecuteInsert(
-		"INSERT INTO `pet_names` (`id`, `pet_name`, `approved`) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE pet_name = ?, approved = ?;",
+	ExecuteInsert(
+		"INSERT INTO `pet_names` (`id`, `pet_name`, `approved`) VALUES (?, ?, ?) "
+		"ON DUPLICATE KEY UPDATE pet_name = ?, approved = ?;",
 		petId,
 		name,
 		approvalStatus,
@@ -469,10 +466,10 @@ std::optional<PetNameInfo> MySQLDatabase::GetPetNameInfo(const LWOOBJID& petId) 
 
 // properties table
 
-std::optional<PropertyInfo> MySQLDatabase::GetPropertyInfo(const uint32_t templateId, const LWOCLONEID cloneId) {
+std::optional<PropertyInfo> MySQLDatabase::GetPropertyInfo(const LWOMAPID mapId, const LWOCLONEID cloneId) {
 	auto propertyEntry = ExecuteSelect(
 		"SELECT id, owner_id, clone_id, name, description, privacy_option, rejection_reason, last_updated, time_claimed, reputation, mod_approved "
-		"FROM properties WHERE template_id = ? AND clone_id = ?;", templateId, cloneId);
+		"FROM properties WHERE zone_id = ? AND clone_id = ?;", mapId, cloneId);
 
 	if (!propertyEntry->next()) {
 		return std::nullopt;
@@ -504,19 +501,6 @@ void MySQLDatabase::UpdatePropertyModerationInfo(const LWOOBJID& id, const uint3
 
 void MySQLDatabase::UpdatePropertyDetails(const LWOOBJID& id, const std::string_view name, const std::string_view description) {
 	ExecuteUpdate("UPDATE properties SET name = ?, description = ? WHERE id = ? LIMIT 1;", name, description, id);
-}
-
-std::optional<PropertyModerationInfo> MySQLDatabase::GetPropertyModerationInfo(const LWOOBJID& propertyId) {
-	auto result = ExecuteSelect("SELECT rejection_reason, mod_approved FROM properties WHERE id = ? LIMIT 1;", propertyId);
-	if (!result->next()) {
-		return std::nullopt;
-	}
-
-	PropertyModerationInfo toReturn;
-	toReturn.rejectionReason = result->getString("rejection_reason").c_str();
-	toReturn.modApproved = result->getUInt("mod_approved");
-
-	return toReturn;
 }
 
 void MySQLDatabase::UpdatePerformanceCost(const LWOZONEID& zoneId, const float performanceCost) {
@@ -600,17 +584,6 @@ void MySQLDatabase::RemoveModel(const LWOOBJID& modelId) {
 	ExecuteDelete("DELETE FROM properties_contents WHERE id = ?;", modelId);
 }
 
-std::vector<LWOOBJID> MySQLDatabase::GetPropertyModelIds(const LWOOBJID& propertyId) {
-	auto result = ExecuteSelect("SELECT id FROM properties_contents WHERE property_id = ?;", propertyId);
-
-	std::vector<LWOOBJID> toReturn;
-	toReturn.reserve(result->rowsCount());
-	while (result->next()) {
-		toReturn.push_back(result->getUInt64("id"));
-	}
-	return toReturn; // RVO; allow compiler to elide the return.
-}
-
 // bug_reports table
 
 void MySQLDatabase::InsertNewBugReport(
@@ -643,9 +616,9 @@ void MySQLDatabase::InsertNewMail(const MailInfo& mail) {
 		"(`sender_id`, `sender_name`, `receiver_id`, `receiver_name`, `time_sent`, `subject`, `body`, `attachment_id`, `attachment_lot`, `attachment_subkey`, `attachment_count`, `was_read`)"
 		" VALUES (?,?,?,?,?,?,?,?,?,?,?,0)",
 		mail.senderId,
-		mail.senderUsername.c_str(),
+		mail.senderUsername,
 		mail.receiverId,
-		mail.recipient.c_str(),
+		mail.recipient,
 		time(NULL),
 		mail.subject,
 		mail.body,
@@ -658,8 +631,8 @@ void MySQLDatabase::InsertNewMail(const MailInfo& mail) {
 std::vector<MailInfo> MySQLDatabase::GetMailForPlayer(const uint32_t numberOfMail, const uint32_t characterId) {
 	auto res = ExecuteSelect(
 		"SELECT id, subject, body, sender_name, attachment_id, attachment_lot, attachment_subkey, attachment_count, was_read, time_sent"
-		" FROM mail WHERE receiver_id=? limit 20;",
-		characterId);
+		" FROM mail WHERE receiver_id=? limit ?;",
+		characterId, numberOfMail);
 
 	std::vector<MailInfo> toReturn;
 	toReturn.reserve(res->rowsCount());
@@ -711,12 +684,12 @@ void MySQLDatabase::MarkMailRead(const uint64_t mailId) {
 	ExecuteUpdate("UPDATE mail SET was_read=1 WHERE id=? LIMIT 1;", mailId);
 }
 
-void MySQLDatabase::DeleteMail(const uint64_t mailId) {
-	ExecuteDelete("DELETE FROM mail WHERE id=? LIMIT 1;", mailId);
-}
-
 void MySQLDatabase::ClaimMailItem(const uint64_t mailId) {
 	ExecuteUpdate("UPDATE mail SET attachment_lot=0 WHERE id=? LIMIT 1;", mailId);
+}
+
+void MySQLDatabase::DeleteMail(const uint64_t mailId) {
+	ExecuteDelete("DELETE FROM mail WHERE id=? LIMIT 1;", mailId);
 }
 
 // command_log table

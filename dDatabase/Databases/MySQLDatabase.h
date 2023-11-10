@@ -37,12 +37,12 @@ public:
 
 	std::optional<DatabaseStructs::ApprovedNames> GetApprovedCharacterNames() override;
 
-	std::optional<DatabaseStructs::FriendsList> GetFriendsList(uint32_t charID) override;
+	std::vector<FriendData> GetFriendsList(uint32_t charID) override;
 
 	// No optional needed here, since if we did that, we'd return a bool of a bool in essenece.
 	// Just return true if and only if the character name exists.
 	std::optional<uint32_t> DoesCharacterExist(const std::string_view name) override;
-	std::optional<DatabaseStructs::BestFriendStatus> GetBestFriendStatus(const uint32_t playerAccountId, const uint32_t friendAccountId) override;
+	std::optional<DatabaseStructs::BestFriendStatus> GetBestFriendStatus(const uint32_t playerCharacterId, const uint32_t friendCharacterId) override;
 	void SetBestFriendStatus(const uint32_t playerAccountId, const uint32_t friendAccountId, const uint32_t bestFriendStatus) override;
 	void AddFriend(const uint32_t playerAccountId, const uint32_t friendAccountId) override;
 	std::optional<uint32_t> GetCharacterIdFromCharacterName(const std::string_view name) override;
@@ -68,7 +68,7 @@ public:
 	void UpdateLastLoggedInCharacter(const uint32_t characterId) override;
 	void SetPetNameModerationStatus(const LWOOBJID& petId, const std::string_view name, const int32_t approvalStatus) override;
 	std::optional<DatabaseStructs::PetNameInfo> GetPetNameInfo(const LWOOBJID& petId) override;
-	std::optional<DatabaseStructs::PropertyInfo> GetPropertyInfo(const uint32_t templateId, const LWOCLONEID cloneId) override;
+	std::optional<DatabaseStructs::PropertyInfo> GetPropertyInfo(const LWOMAPID mapId, const LWOCLONEID cloneId) override;
 	void UpdatePropertyModerationInfo(const LWOOBJID& id, const uint32_t privacyOption, const std::string_view rejectionReason, const uint32_t modApproved) override;
 	void UpdatePropertyDetails(const LWOOBJID& id, const std::string_view name, const std::string_view description) override;
 	void InsertNewProperty(
@@ -84,8 +84,6 @@ public:
 	void InsertNewPropertyModel(const LWOOBJID& propertyId, const DatabaseStructs::DatabaseModel& model, const std::string_view name) override;
 	void UpdateModelPositionRotation(const LWOOBJID& propertyId, const NiPoint3& position, const NiQuaternion& rotation) override;
 	void RemoveModel(const LWOOBJID& modelId) override;
-	std::vector<LWOOBJID> GetPropertyModelIds(const LWOOBJID& propertyId) override;
-	std::optional<DatabaseStructs::PropertyModerationInfo> GetPropertyModerationInfo(const LWOOBJID& propertyId) override;
 	void UpdatePerformanceCost(const LWOZONEID& zoneId, const float performanceCost) override;
 	void InsertNewBugReport(
 		const std::string_view body,

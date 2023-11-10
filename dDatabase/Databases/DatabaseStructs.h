@@ -27,10 +27,6 @@ namespace DatabaseStructs {
 		std::vector<std::string> names;
 	};
 
-	struct FriendsList {
-		std::vector<FriendData> friends;
-	};
-
 	struct BestFriendStatus {
 		uint32_t playerAccountId{};
 		uint32_t friendAccountId{};
@@ -72,6 +68,10 @@ namespace DatabaseStructs {
 	};
 
 	struct DatabaseModel {
+		bool operator==(const LWOOBJID& other) const {
+			return id == other;
+		}
+
 		NiPoint3 position;
 		NiQuaternion rotation;
 		LWOOBJID id{};

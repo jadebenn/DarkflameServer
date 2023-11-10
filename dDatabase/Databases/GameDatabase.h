@@ -22,9 +22,9 @@ public:
 
 	virtual std::optional<DatabaseStructs::MasterInfo> GetMasterInfo() = 0;
 	virtual std::optional<DatabaseStructs::ApprovedNames> GetApprovedCharacterNames() = 0;
-	virtual std::optional<DatabaseStructs::FriendsList> GetFriendsList(const uint32_t charID) = 0;
+	virtual std::vector<FriendData> GetFriendsList(const uint32_t charID) = 0;
 	virtual std::optional<uint32_t> DoesCharacterExist(const std::string_view name) = 0;
-	virtual std::optional<DatabaseStructs::BestFriendStatus> GetBestFriendStatus(const uint32_t playerAccountId, const uint32_t friendAccountId) = 0;
+	virtual std::optional<DatabaseStructs::BestFriendStatus> GetBestFriendStatus(const uint32_t playerCharacterId, const uint32_t friendCharacterId) = 0;
 	virtual void SetBestFriendStatus(const uint32_t playerAccountId, const uint32_t friendAccountId, const uint32_t bestFriendStatus) = 0;
 	virtual void AddFriend(const uint32_t playerAccountId, const uint32_t friendAccountId) = 0;
 	virtual std::optional<uint32_t> GetCharacterIdFromCharacterName(const std::string_view name) = 0;
@@ -50,7 +50,7 @@ public:
 	virtual void UpdateLastLoggedInCharacter(const uint32_t characterId) = 0;
 	virtual void SetPetNameModerationStatus(const LWOOBJID& petId, const std::string_view name, const int32_t approvalStatus) = 0;
 	virtual std::optional<DatabaseStructs::PetNameInfo> GetPetNameInfo(const LWOOBJID& petId) = 0;
-	virtual std::optional<DatabaseStructs::PropertyInfo> GetPropertyInfo(const uint32_t templateId, const LWOCLONEID cloneId) = 0;
+	virtual std::optional<DatabaseStructs::PropertyInfo> GetPropertyInfo(const LWOMAPID mapId, const LWOCLONEID cloneId) = 0;
 	virtual void UpdatePropertyModerationInfo(const LWOOBJID& id, const uint32_t privacyOption, const std::string_view rejectionReason, const uint32_t modApproved) = 0;
 	virtual void UpdatePropertyDetails(const LWOOBJID& id, const std::string_view name, const std::string_view description) = 0;
 	virtual void InsertNewProperty(
@@ -67,8 +67,6 @@ public:
 	virtual void InsertNewPropertyModel(const LWOOBJID& propertyId, const DatabaseStructs::DatabaseModel& model, const std::string_view name) = 0;
 	virtual void UpdateModelPositionRotation(const LWOOBJID& propertyId, const NiPoint3& position, const NiQuaternion& rotation) = 0;
 	virtual void RemoveModel(const LWOOBJID& modelId) = 0;
-	virtual std::vector<LWOOBJID> GetPropertyModelIds(const LWOOBJID& propertyId) = 0;
-	virtual std::optional<DatabaseStructs::PropertyModerationInfo> GetPropertyModerationInfo(const LWOOBJID& propertyId) = 0;
 	virtual void UpdatePerformanceCost(const LWOZONEID& zoneId, const float performanceCost) = 0;
 	virtual void InsertNewBugReport(
 		const std::string_view body,
