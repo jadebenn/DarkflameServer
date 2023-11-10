@@ -81,17 +81,17 @@ void MySQLDatabase::InsertNewCharacter(const uint32_t accountId, const uint32_t 
 		name,
 		pendingName,
 		false,
-		time(NULL));
+		static_cast<uint32_t>(time(NULL)));
 }
 
 void MySQLDatabase::SetCharacterName(const uint32_t characterId, const std::string_view name) {
-	ExecuteUpdate("UPDATE charinfo SET name = ?, pending_name = '', needs_rename = 0, last_login = ? WHERE id = ? LIMIT 1;", name, time(NULL), characterId);
+	ExecuteUpdate("UPDATE charinfo SET name = ?, pending_name = '', needs_rename = 0, last_login = ? WHERE id = ? LIMIT 1;", name, static_cast<uint32_t>(time(NULL)), characterId);
 }
 
 void MySQLDatabase::SetPendingCharacterName(const uint32_t characterId, const std::string_view name) {
-	ExecuteUpdate("UPDATE charinfo SET pending_name = ?, needs_rename = 0, last_login = ? WHERE id = ? LIMIT 1", name, time(NULL), characterId);
+	ExecuteUpdate("UPDATE charinfo SET pending_name = ?, needs_rename = 0, last_login = ? WHERE id = ? LIMIT 1", name, static_cast<uint32_t>(time(NULL)), characterId);
 }
 
 void MySQLDatabase::UpdateLastLoggedInCharacter(const uint32_t characterId) {
-	ExecuteUpdate("UPDATE charinfo SET last_login = ? WHERE id = ? LIMIT 1", time(NULL), characterId);
+	ExecuteUpdate("UPDATE charinfo SET last_login = ? WHERE id = ? LIMIT 1", static_cast<uint32_t>(time(NULL)), characterId);
 }

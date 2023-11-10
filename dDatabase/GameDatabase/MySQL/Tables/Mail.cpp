@@ -9,7 +9,7 @@ void MySQLDatabase::InsertNewMail(const IMail::MailInfo& mail) {
 		mail.senderUsername,
 		mail.receiverId,
 		mail.recipient,
-		time(NULL),
+		static_cast<uint32_t>(time(NULL)),
 		mail.subject,
 		mail.body,
 		mail.itemID,

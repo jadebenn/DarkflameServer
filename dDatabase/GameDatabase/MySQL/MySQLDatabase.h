@@ -242,12 +242,6 @@ inline void SetParam(UniquePreppedStmtRef stmt, const int index, const std::istr
 }
 
 template<>
-inline void SetParam(UniquePreppedStmtRef stmt, const int index, const time_t param) {
-	// LOG("Time");
-	stmt->setUInt64(index, param);
-}
-
-template<>
 inline void SetParam(UniquePreppedStmtRef stmt, const int index, const std::optional<uint32_t> param) {
 	if (param) {
 		// LOG("%d", param.value());
