@@ -124,22 +124,98 @@ std::unique_ptr<sql::ResultSet> MySQLDatabase::ExecuteQueryUnique(const std::uni
 	return std::unique_ptr<sql::ResultSet>(result);
 }
 
-// queries
-std::optional<MasterInfo> MySQLDatabase::GetMasterInfo() {
+// Activity_log table
 
-	auto result = ExecuteQueryUnique("SELECT ip, port FROM servers WHERE name='master' LIMIT 1;");
+void MySQLDatabase::UpdateActivityLog(const uint32_t accountId, const eActivityType activityType, const LWOMAPID mapId) {
+	auto activityUpdate = CreatePreppedStmtUnique("INSERT INTO activity_log (character_id, activity, time, map_id) VALUES (?, ?, ?, ?);");
+	activityUpdate->setUInt(1, accountId);
+	activityUpdate->setUInt(2, static_cast<uint32_t>(activityType));
+	activityUpdate->setUInt(3, static_cast<uint32_t>(time(NULL))); // UNIX_TIMESTAMP()
+	activityUpdate->setUInt(4, mapId);
+	activityUpdate->execute();
+}
+
+// Accounts table
+
+std::optional<UserInfo> MySQLDatabase::GetUserInfo(const std::string_view username) {
+	auto stmt = CreatePreppedStmtUnique("SELECT id, gm_level FROM accounts WHERE name = ? LIMIT 1;");
+	stmt->setString(1, username.data());
+	auto result = ExecuteQueryUnique(stmt);
 
 	if (!result->next()) {
 		return std::nullopt;
 	}
 
-	MasterInfo toReturn;
-
-	toReturn.ip = result->getString("ip").c_str();
-	toReturn.port = result->getInt("port");
+	UserInfo toReturn;
+	toReturn.accountId = result->getUInt("id");
+	toReturn.maxGMLevel = static_cast<eGameMasterLevel>(result->getInt("gm_level"));
 
 	return toReturn;
 }
+
+void MySQLDatabase::UpdateAccountUnmuteTime(const uint32_t accountId, const uint64_t timeToUnmute) {
+	auto userUpdate = CreatePreppedStmtUnique("UPDATE accounts SET mute_expire = ? WHERE id = ?;");
+	userUpdate->setUInt64(1, timeToUnmute);
+	userUpdate->setUInt(2, accountId);
+	userUpdate->executeUpdate();
+}
+
+void MySQLDatabase::UpdateAccountBan(const uint32_t accountId, const bool banned) {
+	auto userUpdate = CreatePreppedStmtUnique("UPDATE accounts SET banned = ? WHERE id = ?;");
+	userUpdate->setBoolean(1, banned);
+	userUpdate->setUInt(2, accountId);
+	userUpdate->executeUpdate();
+}
+
+void MySQLDatabase::UpdateAccountPassword(const std::string_view bcryptpassword, const uint32_t accountId) {
+	auto userUpdateStatement = CreatePreppedStmtUnique("UPDATE accounts SET password = ? WHERE id = ?;");
+	userUpdateStatement->setString(1, bcryptpassword.data());
+	userUpdateStatement->setUInt(2, accountId);
+	userUpdateStatement->execute();
+}
+
+void MySQLDatabase::InsertNewAccount(const std::string_view username, const std::string_view bcryptpassword) {
+	auto statement = CreatePreppedStmtUnique("INSERT INTO accounts (name, password, gm_level) VALUES (?, ?, ?);");
+	statement->setString(1, username.data());
+	statement->setString(2, bcryptpassword.data());
+	statement->setInt(3, static_cast<int32_t>(eGameMasterLevel::OPERATOR));
+	statement->execute();
+}
+
+std::optional<uint32_t> MySQLDatabase::GetAccountId(const std::string_view username) {
+	auto stmt = CreatePreppedStmtUnique("SELECT id FROM accounts WHERE name = ? LIMIT 1;");
+	stmt->setString(1, username.data());
+	auto result = ExecuteQueryUnique(stmt);
+
+	if (!result->next()) {
+		return std::nullopt;
+	}
+
+	return result->getUInt("id");
+}
+
+std::optional<AccountInfo> MySQLDatabase::GetAccountDetails(const std::string_view name) {
+	auto stmt = CreatePreppedStmtUnique("SELECT password, banned, locked, play_key_id, gm_level FROM accounts WHERE name=? LIMIT 1;");
+	stmt->setString(1, name.data());
+
+	auto res = ExecuteQueryUnique(stmt);
+
+	if (!res->next()) {
+		return std::nullopt;
+	}
+
+	AccountInfo toReturn;
+
+	toReturn.bcryptPassword = res->getString("password").c_str();
+	toReturn.banned = res->getBoolean("banned");
+	toReturn.locked = res->getBoolean("locked");
+	toReturn.playKeyId = res->getUInt("play_key_id");
+	toReturn.gmLevel = static_cast<eGameMasterLevel>(res->getInt("gm_level"));
+
+	return toReturn;
+}
+
+// CharInfo table
 
 std::optional<ApprovedNames> MySQLDatabase::GetApprovedCharacterNames() {
 	auto result = ExecuteQueryUnique("SELECT name FROM charinfo;");
@@ -153,6 +229,156 @@ std::optional<ApprovedNames> MySQLDatabase::GetApprovedCharacterNames() {
 
 	return toReturn;
 }
+
+std::optional<uint32_t> MySQLDatabase::DoesCharacterExist(const std::string& name) {
+	auto nameQuery(CreatePreppedStmtUnique("SELECT id FROM charinfo WHERE name = ? LIMIT 1;"));
+	nameQuery->setString(1, name);
+	auto result(nameQuery->executeQuery());
+	if (!result->next()) {
+		return std::nullopt;
+	}
+	return result->getUInt("id");
+}
+
+std::optional<uint32_t> MySQLDatabase::GetCharacterIdFromCharacterName(const std::string& name) {
+	auto nameQuery(CreatePreppedStmtUnique("SELECT id FROM charinfo WHERE name = ? LIMIT 1;"));
+	nameQuery->setString(1, name);
+	auto result(nameQuery->executeQuery());
+
+	if (!result->next()) {
+		return std::nullopt;
+	}
+
+	return result->getUInt(1);
+}
+
+
+std::optional<CharacterInfo> MySQLDatabase::GetCharacterInfo(const uint32_t charId) {
+	auto stmt = CreatePreppedStmtUnique("SELECT name, pending_name, needs_rename, prop_clone_id, permission_map FROM charinfo WHERE id = ? LIMIT 1;");
+	stmt->setUInt(1, charId);
+	auto result = ExecuteQueryUnique(stmt);
+
+	if (!result->next()) {
+		return std::nullopt;
+	}
+
+	CharacterInfo toReturn;
+	toReturn.name = result->getString("name").c_str();
+	toReturn.pendingName = result->getString("pending_name").c_str();
+	toReturn.needsRename = result->getBoolean("needs_rename");
+	toReturn.cloneId = result->getUInt64("prop_clone_id");
+	toReturn.permissionMap = static_cast<ePermissionMap>(result->getUInt("permission_map"));
+
+	return toReturn;
+}
+
+std::optional<CharacterInfo> MySQLDatabase::GetCharacterInfo(const std::string_view name) {
+	auto stmt = CreatePreppedStmtUnique("SELECT id, account_id FROM charinfo WHERE id = ? LIMIT 1;");
+	stmt->setString(1, name.data());
+	auto result = ExecuteQueryUnique(stmt);
+
+	if (!result->next()) {
+		return std::nullopt;
+	}
+
+	CharacterInfo toReturn;
+	toReturn.id = result->getUInt("id");
+	toReturn.accountId = result->getUInt("account_id");
+
+	return toReturn;
+}
+
+std::optional<uint32_t> MySQLDatabase::GetLastUsedCharacterId(const uint32_t accountId) {
+	auto stmt = CreatePreppedStmtUnique("SELECT id FROM charinfo WHERE account_id = ? ORDER BY last_login DESC LIMIT 1;");
+	stmt->setUInt(1, accountId);
+	auto result = ExecuteQueryUnique(stmt);
+
+	if (!result->next()) {
+		return std::nullopt;
+	}
+
+	return result->getUInt("id");
+}
+
+bool MySQLDatabase::IsUsernameAvailable(const std::string_view username) {
+	auto stmt = CreatePreppedStmtUnique("SELECT id FROM charinfo WHERE name = ? OR pending_name = ? LIMIT 1;");
+	stmt->setString(1, username.data());
+	stmt->setString(2, username.data());
+	auto result = ExecuteQueryUnique(stmt);
+
+	return !result->next();
+}
+
+std::vector<uint32_t> MySQLDatabase::GetCharacterIds(const uint32_t accountId) {
+	auto stmt = CreatePreppedStmtUnique("SELECT id FROM charinfo WHERE account_id = ? ORDER BY last_login DESC LIMIT 4;");
+	stmt->setUInt(1, accountId);
+	auto result = ExecuteQueryUnique(stmt);
+
+	std::vector<uint32_t> toReturn;
+	toReturn.reserve(result->rowsCount());
+	while (result->next()) {
+		toReturn.push_back(result->getUInt("id"));
+	}
+	return toReturn;
+}
+
+bool MySQLDatabase::IsCharacterIdInUse(const uint32_t characterId) {
+	auto stmt = CreatePreppedStmtUnique("SELECT id FROM charinfo WHERE id = ?;");
+	stmt->setUInt(1, characterId);
+	auto result = ExecuteQueryUnique(stmt);
+
+	return result->next();
+}
+
+void MySQLDatabase::SetCharacterName(const uint32_t characterId, const std::string_view name) {
+	auto stmt = CreatePreppedStmtUnique("UPDATE charinfo SET name = ?, pending_name = '', needs_rename = 0, last_login = ? WHERE id = ? LIMIT 1;");
+	stmt->setString(1, name.data());
+	stmt->setUInt64(2, time(NULL)); // UNIX_TIMESTAMP()
+	stmt->setUInt(3, characterId);
+	stmt->executeUpdate();
+}
+
+void MySQLDatabase::SetPendingCharacterName(const uint32_t characterId, const std::string_view name) {
+	auto stmt = CreatePreppedStmtUnique("UPDATE charinfo SET pending_name = ?, needs_rename = 0, last_login = ? WHERE id = ? LIMIT 1");
+
+	stmt->setString(1, name.data());
+	stmt->setUInt64(2, time(NULL)); // UNIX_TIMESTAMP()
+	stmt->setUInt(3, characterId);
+
+	stmt->executeUpdate();
+}
+
+void MySQLDatabase::UpdateLastLoggedInCharacter(const uint32_t characterId) {
+	auto stmt = CreatePreppedStmtUnique("UPDATE charinfo SET last_login = ? WHERE id = ? LIMIT 1");
+	stmt->setUInt64(1, time(NULL)); // UNIX_TIMESTAMP()
+	stmt->setUInt(2, characterId);
+	stmt->executeUpdate();
+}
+
+std::string MySQLDatabase::GetCharacterNameForCloneId(const uint32_t cloneId) {
+	auto stmt = CreatePreppedStmtUnique("SELECT name FROM charinfo WHERE prop_clone_id = ? LIMIT 1;");
+	stmt->setUInt(1, cloneId);
+	auto result = ExecuteQueryUnique(stmt);
+
+	if (!result->next()) {
+		return "";
+	}
+
+	return result->getString("name").c_str();
+}
+
+void MySQLDatabase::InsertNewCharacter(const uint32_t accountId, const uint32_t characterId, const std::string_view name, const std::string_view pendingName) {
+	auto stmt = CreatePreppedStmtUnique("INSERT INTO `charinfo`(`id`, `account_id`, `name`, `pending_name`, `needs_rename`, `last_login`) VALUES (?,?,?,?,?,?)");
+	stmt->setUInt(1, characterId);
+	stmt->setUInt(2, accountId);
+	stmt->setString(3, name.data());
+	stmt->setString(4, pendingName.data());
+	stmt->setBoolean(5, false);
+	stmt->setUInt64(6, time(NULL)); // UNIX_TIMESTAMP()
+	stmt->execute();
+}
+
+// Friends table
 
 std::optional<FriendsList> MySQLDatabase::GetFriendsList(const uint32_t charId) {
 	auto stmt = CreatePreppedStmtUnique(
@@ -192,16 +418,6 @@ std::optional<FriendsList> MySQLDatabase::GetFriendsList(const uint32_t charId) 
 	return toReturn;
 }
 
-std::optional<uint32_t> MySQLDatabase::DoesCharacterExist(const std::string& name) {
-	auto nameQuery(CreatePreppedStmtUnique("SELECT id FROM charinfo WHERE name = ? LIMIT 1;"));
-	nameQuery->setString(1, name);
-	auto result(nameQuery->executeQuery());
-	if (!result->next()) {
-		return std::nullopt;
-	}
-	return result->getUInt("id");
-}
-
 std::optional<BestFriendStatus> MySQLDatabase::GetBestFriendStatus(const uint32_t playerAccountId, const uint32_t friendAccountId) {
 	auto friendUpdate = CreatePreppedStmtUnique("SELECT * FROM friends WHERE (player_id = ? AND friend_id = ?) OR (player_id = ? AND friend_id = ?) LIMIT 1;");
 	friendUpdate->setUInt(1, playerAccountId);
@@ -239,18 +455,6 @@ void MySQLDatabase::AddFriend(const uint32_t playerAccountId, const uint32_t fri
 	friendUpdate->execute();
 }
 
-std::optional<uint32_t> MySQLDatabase::GetCharacterIdFromCharacterName(const std::string& name) {
-	auto nameQuery(CreatePreppedStmtUnique("SELECT id FROM charinfo WHERE name = ? LIMIT 1;"));
-	nameQuery->setString(1, name);
-	auto result(nameQuery->executeQuery());
-
-	if (!result->next()) {
-		return std::nullopt;
-	}
-
-	return result->getUInt(1);
-}
-
 void MySQLDatabase::RemoveFriend(const uint32_t playerAccountId, const uint32_t friendAccountId) {
 	auto friendUpdate = CreatePreppedStmtUnique("DELETE FROM friends WHERE (player_id = ? AND friend_id = ?) OR (player_id = ? AND friend_id = ?) LIMIT 1;");
 	friendUpdate->setUInt(1, playerAccountId);
@@ -260,13 +464,49 @@ void MySQLDatabase::RemoveFriend(const uint32_t playerAccountId, const uint32_t 
 	friendUpdate->execute();
 }
 
-void MySQLDatabase::UpdateActivityLog(const uint32_t accountId, const eActivityType activityType, const LWOMAPID mapId) {
-	auto activityUpdate = CreatePreppedStmtUnique("INSERT INTO activity_log (character_id, activity, time, map_id) VALUES (?, ?, ?, ?);");
-	activityUpdate->setUInt(1, accountId);
-	activityUpdate->setUInt(2, static_cast<uint32_t>(activityType));
-	activityUpdate->setUInt(3, static_cast<uint32_t>(time(NULL))); // UNIX_TIMESTAMP()
-	activityUpdate->setUInt(4, mapId);
-	activityUpdate->execute();
+// Ugc table
+
+void MySQLDatabase::RemoveUnreferencedUgcModels() {
+	auto stmt = ExecuteQueryUnique("DELETE FROM ugc WHERE id NOT IN (SELECT ugc_id FROM properties_contents WHERE ugc_id IS NOT NULL);");
+}
+
+void MySQLDatabase::InsertNewUgcModel(
+	std::istringstream& sd0Data, // cant be const sad
+	const uint32_t blueprintId,
+	const uint32_t accountId,
+	const uint32_t characterId) {
+	auto ugcs = CreatePreppedStmtUnique("INSERT INTO `ugc`(`id`, `account_id`, `character_id`, `is_optimized`, `lxfml`, `bake_ao`, `filename`) VALUES (?,?,?,?,?,?,?)");
+	ugcs->setUInt(1, blueprintId);
+	ugcs->setInt(2, accountId);
+	ugcs->setInt(3, characterId);
+	ugcs->setInt(4, 0);
+
+	ugcs->setBlob(5, &sd0Data);
+	ugcs->setBoolean(6, false);
+	ugcs->setString(7, "weedeater.lxfml");
+	ugcs->execute();
+}
+
+std::vector<UgcModel> MySQLDatabase::GetAllUgcModels(const LWOOBJID& propertyId) {
+	auto stmt = CreatePreppedStmtUnique(
+		"SELECT lxfml, u.id FROM ugc AS u JOIN properties_contents AS pc ON u.id = pc.ugc_id WHERE lot = 14 AND property_id = ? AND pc.ugc_id IS NOT NULL;"
+	);
+	stmt->setUInt64(1, propertyId);
+	auto result = ExecuteQueryUnique(stmt);
+	
+	std::vector<UgcModel> toReturn;
+
+	while (result->next()) {
+		UgcModel model;
+
+		// blob is owned by the query, so we need to do a deep copy :/
+		std::unique_ptr<std::istream> blob(result->getBlob("lxfml"));
+		model.lxfmlData << blob->rdbuf();
+		model.id = result->getUInt64("id");
+		toReturn.push_back(std::move(model));
+	}
+
+	return toReturn; // RVO; allow compiler to elide the return.
 }
 
 void MySQLDatabase::DeleteUgcModelData(const LWOOBJID& modelId) {
@@ -303,6 +543,8 @@ std::vector<UgcModel> MySQLDatabase::GetUgcModels() {
 	return std::move(models);
 }
 
+// migration_history table
+
 void MySQLDatabase::CreateMigrationHistoryTable() {
 	ExecuteQueryUnique("CREATE TABLE IF NOT EXISTS migration_history (name TEXT NOT NULL, date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP());");
 }
@@ -319,40 +561,7 @@ void MySQLDatabase::InsertMigration(const std::string_view str) {
 	stmt->execute();
 }
 
-std::optional<CharacterInfo> MySQLDatabase::GetCharacterInfo(const uint32_t charId) {
-	auto stmt = CreatePreppedStmtUnique("SELECT name, pending_name, needs_rename, prop_clone_id, permission_map FROM charinfo WHERE id = ? LIMIT 1;");
-	stmt->setUInt(1, charId);
-	auto result = ExecuteQueryUnique(stmt);
-
-	if (!result->next()) {
-		return std::nullopt;
-	}
-
-	CharacterInfo toReturn;
-	toReturn.name = result->getString("name").c_str();
-	toReturn.pendingName = result->getString("pending_name").c_str();
-	toReturn.needsRename = result->getBoolean("needs_rename");
-	toReturn.cloneId = result->getUInt64("prop_clone_id");
-	toReturn.permissionMap = static_cast<ePermissionMap>(result->getUInt("permission_map"));
-
-	return toReturn;
-}
-
-std::optional<CharacterInfo> MySQLDatabase::GetCharacterInfo(const std::string_view name) {
-	auto stmt = CreatePreppedStmtUnique("SELECT id, account_id FROM charinfo WHERE id = ? LIMIT 1;");
-	stmt->setString(1, name.data());
-	auto result = ExecuteQueryUnique(stmt);
-
-	if (!result->next()) {
-		return std::nullopt;
-	}
-
-	CharacterInfo toReturn;
-	toReturn.id = result->getUInt("id");
-	toReturn.accountId = result->getUInt("account_id");
-
-	return toReturn;
-}
+// Charxml table
 
 std::string MySQLDatabase::GetCharacterXml(const uint32_t charId) {
 	auto stmt = CreatePreppedStmtUnique("SELECT xml_data FROM charxml WHERE id = ? LIMIT 1;");
@@ -373,80 +582,11 @@ void MySQLDatabase::UpdateCharacterXml(const uint32_t charId, const std::string_
 	stmt->executeUpdate();
 }
 
-std::optional<UserInfo> MySQLDatabase::GetUserInfo(const std::string_view username) {
-	auto stmt = CreatePreppedStmtUnique("SELECT id, gm_level FROM accounts WHERE name = ? LIMIT 1;");
-	stmt->setString(1, username.data());
-	auto result = ExecuteQueryUnique(stmt);
-
-	if (!result->next()) {
-		return std::nullopt;
-	}
-
-	UserInfo toReturn;
-	toReturn.accountId = result->getUInt("id");
-	toReturn.maxGMLevel = static_cast<eGameMasterLevel>(result->getInt("gm_level"));
-
-	return toReturn;
-}
-
-std::optional<uint32_t> MySQLDatabase::GetLastUsedCharacterId(const uint32_t accountId) {
-	auto stmt = CreatePreppedStmtUnique("SELECT id FROM charinfo WHERE account_id = ? ORDER BY last_login DESC LIMIT 1;");
-	stmt->setUInt(1, accountId);
-	auto result = ExecuteQueryUnique(stmt);
-
-	if (!result->next()) {
-		return std::nullopt;
-	}
-
-	return result->getUInt("id");
-}
-
-bool MySQLDatabase::IsUsernameAvailable(const std::string_view username) {
-	auto stmt = CreatePreppedStmtUnique("SELECT id FROM charinfo WHERE name = ? OR pending_name = ? LIMIT 1;");
-	stmt->setString(1, username.data());
-	stmt->setString(2, username.data());
-	auto result = ExecuteQueryUnique(stmt);
-
-	return !result->next();
-}
-
-void MySQLDatabase::InsertNewCharacter(const uint32_t accountId, const uint32_t characterId, const std::string_view name, const std::string_view pendingName) {
-	auto stmt = CreatePreppedStmtUnique("INSERT INTO `charinfo`(`id`, `account_id`, `name`, `pending_name`, `needs_rename`, `last_login`) VALUES (?,?,?,?,?,?)");
-	stmt->setUInt(1, characterId);
-	stmt->setUInt(2, accountId);
-	stmt->setString(3, name.data());
-	stmt->setString(4, pendingName.data());
-	stmt->setBoolean(5, false);
-	stmt->setUInt64(6, time(NULL)); // UNIX_TIMESTAMP()
-	stmt->execute();
-}
-
 void MySQLDatabase::InsertCharacterXml(const uint32_t accountId, const std::string_view lxfml) {
 	auto stmt = CreatePreppedStmtUnique("INSERT INTO `charxml` (`id`, `xml_data`) VALUES (?,?)");
 	stmt->setUInt(1, accountId);
 	stmt->setString(2, lxfml.data());
 	stmt->execute();
-}
-
-std::vector<uint32_t> MySQLDatabase::GetCharacterIds(const uint32_t accountId) {
-	auto stmt = CreatePreppedStmtUnique("SELECT id FROM charinfo WHERE account_id = ? ORDER BY last_login DESC LIMIT 4;");
-	stmt->setUInt(1, accountId);
-	auto result = ExecuteQueryUnique(stmt);
-
-	std::vector<uint32_t> toReturn;
-	toReturn.reserve(result->rowsCount());
-	while (result->next()) {
-		toReturn.push_back(result->getUInt("id"));
-	}
-	return toReturn;
-}
-
-bool MySQLDatabase::IsCharacterIdInUse(const uint32_t characterId) {
-	auto stmt = CreatePreppedStmtUnique("SELECT id FROM charinfo WHERE id = ?;");
-	stmt->setUInt(1, characterId);
-	auto result = ExecuteQueryUnique(stmt);
-
-	return result->next();
 }
 
 void MySQLDatabase::DeleteCharacter(const uint32_t characterId) {
@@ -492,30 +632,7 @@ void MySQLDatabase::DeleteCharacter(const uint32_t characterId) {
 	stmt->execute();
 }
 
-void MySQLDatabase::SetCharacterName(const uint32_t characterId, const std::string_view name) {
-	auto stmt = CreatePreppedStmtUnique("UPDATE charinfo SET name = ?, pending_name = '', needs_rename = 0, last_login = ? WHERE id = ? LIMIT 1;");
-	stmt->setString(1, name.data());
-	stmt->setUInt64(2, time(NULL)); // UNIX_TIMESTAMP()
-	stmt->setUInt(3, characterId);
-	stmt->executeUpdate();
-}
-
-void MySQLDatabase::SetPendingCharacterName(const uint32_t characterId, const std::string_view name) {
-	auto stmt = CreatePreppedStmtUnique("UPDATE charinfo SET pending_name = ?, needs_rename = 0, last_login = ? WHERE id = ? LIMIT 1");
-
-	stmt->setString(1, name.data());
-	stmt->setUInt64(2, time(NULL)); // UNIX_TIMESTAMP()
-	stmt->setUInt(3, characterId);
-
-	stmt->executeUpdate();
-}
-
-void MySQLDatabase::UpdateLastLoggedInCharacter(const uint32_t characterId) {
-	auto stmt = CreatePreppedStmtUnique("UPDATE charinfo SET last_login = ? WHERE id = ? LIMIT 1");
-	stmt->setUInt64(1, time(NULL)); // UNIX_TIMESTAMP()
-	stmt->setUInt(2, characterId);
-	stmt->executeUpdate();
-}
+// Pet_names table
 
 void MySQLDatabase::SetPetNameModerationStatus(const LWOOBJID& petId, const std::string_view name, const int32_t approvalStatus) {
 	auto stmt = CreatePreppedStmtUnique("INSERT INTO `pet_names` (`id`, `pet_name`, `approved`) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE pet_name = ?, approved = ?;");
@@ -542,6 +659,8 @@ std::optional<PetNameInfo> MySQLDatabase::GetPetNameInfo(const LWOOBJID& petId) 
 
 	return toReturn;
 }
+
+// properties table
 
 std::optional<PropertyInfo> MySQLDatabase::GetPropertyInfo(const uint32_t templateId, const LWOCLONEID cloneId) {
 	auto propertyLookup = CreatePreppedStmtUnique(
@@ -588,6 +707,31 @@ void MySQLDatabase::UpdatePropertyDetails(const LWOOBJID& id, const std::string_
 	stmt->setUInt64(3, id);
 	stmt->executeUpdate();
 }
+
+std::optional<PropertyModerationInfo> MySQLDatabase::GetPropertyModerationInfo(const LWOOBJID& propertyId) {
+	auto stmt = CreatePreppedStmtUnique("SELECT rejection_reason, mod_approved FROM properties WHERE id = ? LIMIT 1;");
+	stmt->setUInt64(1, propertyId);
+	auto result = ExecuteQueryUnique(stmt);
+
+	if (!result->next()) {
+		return std::nullopt;
+	}
+
+	PropertyModerationInfo toReturn;
+	toReturn.rejectionReason = result->getString("rejection_reason").c_str();
+	toReturn.modApproved = result->getUInt("mod_approved");
+
+	return toReturn;
+}
+
+void MySQLDatabase::UpdatePerformanceCost(const LWOZONEID& zoneId, const float performanceCost) {
+	auto stmt = CreatePreppedStmtUnique("UPDATE properties SET performance_cost = ? WHERE zone_id = ? AND clone_id = ? LIMIT 1;");
+	stmt->setFloat(1, performanceCost);
+	stmt->setUInt(2, zoneId.GetMapID());
+	stmt->setUInt(3, zoneId.GetCloneID());
+	stmt->executeUpdate();
+}
+
 void MySQLDatabase::InsertNewProperty(
 	const LWOOBJID& propertyId,
 	const uint32_t characterId,
@@ -612,6 +756,8 @@ void MySQLDatabase::InsertNewProperty(
 	insertion->execute();
 }
 
+// properties_contents table
+
 std::vector<DatabaseModel> MySQLDatabase::GetPropertyModels(const LWOOBJID& propertyId) {
 	auto stmt = CreatePreppedStmtUnique("SELECT id, lot, x, y, z, rx, ry, rz, rw, ugc_id FROM properties_contents WHERE property_id = ?;");
 	stmt->setUInt64(1, propertyId);
@@ -634,10 +780,6 @@ std::vector<DatabaseModel> MySQLDatabase::GetPropertyModels(const LWOOBJID& prop
 		toReturn.push_back(std::move(model));
 	}
 	return toReturn; // RVO; allow compiler to elide the return.
-}
-
-void MySQLDatabase::RemoveUnreferencedUgcModels() {
-	auto stmt = ExecuteQueryUnique("DELETE FROM ugc WHERE id NOT IN (SELECT ugc_id FROM properties_contents WHERE ugc_id IS NOT NULL);");
 }
 
 void MySQLDatabase::InsertNewPropertyModel(const LWOOBJID& propertyId, const DatabaseModel& model, const std::string_view name) {
@@ -709,41 +851,7 @@ std::vector<LWOOBJID> MySQLDatabase::GetPropertyModelIds(const LWOOBJID& propert
 	return toReturn; // RVO; allow compiler to elide the return.
 }
 
-std::string MySQLDatabase::GetCharacterNameForCloneId(const uint32_t cloneId) {
-	auto stmt = CreatePreppedStmtUnique("SELECT name FROM charinfo WHERE prop_clone_id = ? LIMIT 1;");
-	stmt->setUInt(1, cloneId);
-	auto result = ExecuteQueryUnique(stmt);
-
-	if (!result->next()) {
-		return "";
-	}
-
-	return result->getString("name").c_str();
-}
-
-std::optional<PropertyModerationInfo> MySQLDatabase::GetPropertyModerationInfo(const LWOOBJID& propertyId) {
-	auto stmt = CreatePreppedStmtUnique("SELECT rejection_reason, mod_approved FROM properties WHERE id = ? LIMIT 1;");
-	stmt->setUInt64(1, propertyId);
-	auto result = ExecuteQueryUnique(stmt);
-
-	if (!result->next()) {
-		return std::nullopt;
-	}
-
-	PropertyModerationInfo toReturn;
-	toReturn.rejectionReason = result->getString("rejection_reason").c_str();
-	toReturn.modApproved = result->getUInt("mod_approved");
-
-	return toReturn;
-}
-
-void MySQLDatabase::UpdatePerformanceCost(const LWOZONEID& zoneId, const float performanceCost) {
-	auto stmt = CreatePreppedStmtUnique("UPDATE properties SET performance_cost = ? WHERE zone_id = ? AND clone_id = ? LIMIT 1;");
-	stmt->setFloat(1, performanceCost);
-	stmt->setUInt(2, zoneId.GetMapID());
-	stmt->setUInt(3, zoneId.GetCloneID());
-	stmt->executeUpdate();
-}
+// bug_reports table
 
 void MySQLDatabase::InsertNewBugReport(
 	const std::string_view body,
@@ -760,6 +868,8 @@ void MySQLDatabase::InsertNewBugReport(
 	insertBug->execute();
 }
 
+// player_cheat_detections table
+
 void MySQLDatabase::InsertCheatDetection(
 	std::optional<uint32_t> userId,
 	const std::string_view username,
@@ -773,22 +883,7 @@ void MySQLDatabase::InsertCheatDetection(
 	stmt->execute();
 }
 
-void MySQLDatabase::InsertNewUgcModel(
-	std::istringstream& sd0Data, // cant be const sad
-	const uint32_t blueprintId,
-	const uint32_t accountId,
-	const uint32_t characterId) {
-	auto ugcs = CreatePreppedStmtUnique("INSERT INTO `ugc`(`id`, `account_id`, `character_id`, `is_optimized`, `lxfml`, `bake_ao`, `filename`) VALUES (?,?,?,?,?,?,?)");
-	ugcs->setUInt(1, blueprintId);
-	ugcs->setInt(2, accountId);
-	ugcs->setInt(3, characterId);
-	ugcs->setInt(4, 0);
-
-	ugcs->setBlob(5, &sd0Data);
-	ugcs->setBoolean(6, false);
-	ugcs->setString(7, "weedeater.lxfml");
-	ugcs->execute();
-}
+// mail table
 
 void MySQLDatabase::InsertNewMail(const MailInfo& mail) {
 	auto stmt = CreatePreppedStmtUnique(
@@ -880,6 +975,8 @@ void MySQLDatabase::ClaimMailItem(const uint64_t mailId) {
 	stmt->executeUpdate();
 }
 
+// command_log table
+
 void MySQLDatabase::InsertSlashCommandUsage(const std::string_view command, const uint32_t characterId) {
 	auto stmt = CreatePreppedStmtUnique("INSERT INTO command_log (character_id, command) VALUES (?, ?);");
 	stmt->setUInt(1, characterId);
@@ -887,34 +984,7 @@ void MySQLDatabase::InsertSlashCommandUsage(const std::string_view command, cons
 	stmt->execute();
 }
 
-void MySQLDatabase::UpdateAccountUnmuteTime(const uint32_t accountId, const uint64_t timeToUnmute) {
-	auto userUpdate = CreatePreppedStmtUnique("UPDATE accounts SET mute_expire = ? WHERE id = ?;");
-	userUpdate->setUInt64(1, timeToUnmute);
-	userUpdate->setUInt(2, accountId);
-	userUpdate->executeUpdate();
-}
-
-void MySQLDatabase::UpdateAccountBan(const uint32_t accountId, const bool banned) {
-	auto userUpdate = CreatePreppedStmtUnique("UPDATE accounts SET banned = ? WHERE id = ?;");
-	userUpdate->setBoolean(1, banned);
-	userUpdate->setUInt(2, accountId);
-	userUpdate->executeUpdate();
-}
-
-void MySQLDatabase::UpdateAccountPassword(const std::string_view bcryptpassword, const uint32_t accountId) {
-	auto userUpdateStatement = CreatePreppedStmtUnique("UPDATE accounts SET password = ? WHERE id = ?;");
-	userUpdateStatement->setString(1, bcryptpassword.data());
-	userUpdateStatement->setUInt(2, accountId);
-	userUpdateStatement->execute();
-}
-
-void MySQLDatabase::InsertNewAccount(const std::string_view username, const std::string_view bcryptpassword) {
-	auto statement = CreatePreppedStmtUnique("INSERT INTO accounts (name, password, gm_level) VALUES (?, ?, ?);");
-	statement->setString(1, username.data());
-	statement->setString(2, bcryptpassword.data());
-	statement->setInt(3, static_cast<int32_t>(eGameMasterLevel::OPERATOR));
-	statement->execute();
-}
+// servers table
 
 void MySQLDatabase::SetMasterIp(const std::string_view ip, const uint32_t port) {
 	// We only want our 1 entry anyways, so we can just delete all and reinsert the one we want
@@ -926,17 +996,23 @@ void MySQLDatabase::SetMasterIp(const std::string_view ip, const uint32_t port) 
 	stmt->execute();
 }
 
-std::optional<uint32_t> MySQLDatabase::GetAccountId(const std::string_view username) {
-	auto stmt = CreatePreppedStmtUnique("SELECT id FROM accounts WHERE name = ? LIMIT 1;");
-	stmt->setString(1, username.data());
-	auto result = ExecuteQueryUnique(stmt);
+std::optional<MasterInfo> MySQLDatabase::GetMasterInfo() {
+
+	auto result = ExecuteQueryUnique("SELECT ip, port FROM servers WHERE name='master' LIMIT 1;");
 
 	if (!result->next()) {
 		return std::nullopt;
 	}
 
-	return result->getUInt("id");
+	MasterInfo toReturn;
+
+	toReturn.ip = result->getString("ip").c_str();
+	toReturn.port = result->getInt("port");
+
+	return toReturn;
 }
+
+// object_id_tracker table
 
 std::optional<uint32_t> MySQLDatabase::GetCurrentPersistentId() {
 	auto stmt = CreatePreppedStmtUnique("SELECT last_object_id FROM object_id_tracker");
@@ -957,6 +1033,8 @@ void MySQLDatabase::UpdatePersistentId(const uint32_t newId) {
 	stmt->executeUpdate();
 }
 
+// leaderboard table
+
 std::optional<uint32_t> MySQLDatabase::GetDonationTotal(const uint32_t activityId) {
 	auto query = CreatePreppedStmtUnique("SELECT SUM(primaryScore) as donation_total FROM leaderboard WHERE game_id = ?;");
 	query->setInt(1, activityId);
@@ -969,26 +1047,7 @@ std::optional<uint32_t> MySQLDatabase::GetDonationTotal(const uint32_t activityI
 	return donation_total->getUInt("donation_total");
 }
 
-std::optional<AccountInfo> MySQLDatabase::GetAccountDetails(const std::string_view name) {
-	auto stmt = CreatePreppedStmtUnique("SELECT password, banned, locked, play_key_id, gm_level FROM accounts WHERE name=? LIMIT 1;");
-	stmt->setString(1, name.data());
-
-	auto res = ExecuteQueryUnique(stmt);
-
-	if (!res->next()) {
-		return std::nullopt;
-	}
-
-	AccountInfo toReturn;
-
-	toReturn.bcryptPassword = res->getString("password").c_str();
-	toReturn.banned = res->getBoolean("banned");
-	toReturn.locked = res->getBoolean("locked");
-	toReturn.playKeyId = res->getUInt("play_key_id");
-	toReturn.gmLevel = static_cast<eGameMasterLevel>(res->getInt("gm_level"));
-
-	return toReturn;
-}
+// play_keys table
 
 std::optional<bool> MySQLDatabase::IsPlaykeyActive(const uint32_t playkeyId) {
 	auto keyCheckStmt = CreatePreppedStmtUnique("SELECT active FROM `play_keys` WHERE id=?");
@@ -1000,26 +1059,4 @@ std::optional<bool> MySQLDatabase::IsPlaykeyActive(const uint32_t playkeyId) {
 	}
 
 	return keyCheckRes->getBoolean("active");
-}
-
-std::vector<UgcModel> MySQLDatabase::GetAllUgcModels(const LWOOBJID& propertyId) {
-	auto stmt = CreatePreppedStmtUnique(
-		"SELECT lxfml, u.id FROM ugc AS u JOIN properties_contents AS pc ON u.id = pc.ugc_id WHERE lot = 14 AND property_id = ? AND pc.ugc_id IS NOT NULL;"
-	);
-	stmt->setUInt64(1, propertyId);
-	auto result = ExecuteQueryUnique(stmt);
-	
-	std::vector<UgcModel> toReturn;
-
-	while (result->next()) {
-		UgcModel model;
-
-		// blob is owned by the query, so we need to do a deep copy :/
-		std::unique_ptr<std::istream> blob(result->getBlob("lxfml"));
-		model.lxfmlData << blob->rdbuf();
-		model.id = result->getUInt64("id");
-		toReturn.push_back(std::move(model));
-	}
-
-	return toReturn; // RVO; allow compiler to elide the return.
 }

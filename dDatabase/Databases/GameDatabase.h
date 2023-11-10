@@ -11,6 +11,7 @@ namespace sql {
 
 class GameDatabase {
 public:
+	// TODO: These should be made private.
 	virtual void Connect() = 0;
 	virtual void Destroy(std::string source = "", bool log = true) = 0;
 	virtual sql::Statement* CreateStmt() = 0;
