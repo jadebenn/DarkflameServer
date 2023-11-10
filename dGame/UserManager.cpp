@@ -311,7 +311,7 @@ void UserManager::CreateCharacter(const SystemAddress& sysAddr, Packet* packet) 
 				if (!nameOk && u->GetMaxGMLevel() > eGameMasterLevel::FORUM_MODERATOR) nameOk = true;
 
 				std::string_view nameToAssign = !name.empty() && nameOk ? name : predefinedName;
-				std::string_view pendingName = !name.empty() && !nameOk ? name : "";
+				std::string pendingName = !name.empty() && !nameOk ? name : "";
 
 				Database::Get()->InsertNewCharacter(u->GetAccountID(), objectID, nameToAssign, pendingName);
 

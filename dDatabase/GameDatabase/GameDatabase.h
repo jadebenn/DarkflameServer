@@ -34,6 +34,7 @@ class GameDatabase :
 	public IMigrationHistory, public IUgc, public IFriends, public ICharInfo,
 	public IAccounts, public IActivityLog {
 public:
+	virtual ~GameDatabase() = default;
 	// TODO: These should be made private.
 	virtual void Connect() = 0;
 	virtual void Destroy(std::string source = "") = 0;
