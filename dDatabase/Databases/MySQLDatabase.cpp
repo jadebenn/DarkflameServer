@@ -69,16 +69,7 @@ sql::Statement* MySQLDatabase::CreateStmt() {
 	return toReturn;
 }
 
-std::unique_ptr<sql::PreparedStatement> MySQLDatabase::CreatePreppedStmtUnique(const std::string& query) {
-	auto* stmt = CreatePreppedStmt(query);
-	return std::unique_ptr<sql::PreparedStatement>(stmt);
-}
-
 sql::PreparedStatement* MySQLDatabase::CreatePreppedStmt(const std::string& query) {
-	const char* test = query.c_str();
-	size_t size = query.length();
-	sql::SQLString str(test, size);
-
 	if (!con) {
 		Connect();
 		LOG("Trying to reconnect to MySQL");
@@ -93,9 +84,7 @@ sql::PreparedStatement* MySQLDatabase::CreatePreppedStmt(const std::string& quer
 		LOG("Trying to reconnect to MySQL from invalid or closed connection");
 	}
 
-	auto* stmt = con->prepareStatement(str);
-
-	return stmt;
+	return con->prepareStatement(sql::SQLString(query.c_str(), query.length()));
 }
 
 void MySQLDatabase::Commit() {
@@ -114,33 +103,21 @@ void MySQLDatabase::SetAutoCommit(bool value) {
 	con->setAutoCommit(value);
 }
 
-std::unique_ptr<sql::ResultSet> MySQLDatabase::ExecuteQueryUnique(const std::string& query) {
-	auto* result = CreatePreppedStmtUnique(query)->executeQuery();
-	return std::unique_ptr<sql::ResultSet>(result);
-}
-
-std::unique_ptr<sql::ResultSet> MySQLDatabase::ExecuteQueryUnique(const std::unique_ptr<sql::PreparedStatement>& query) {
-	auto* result = query->executeQuery();
-	return std::unique_ptr<sql::ResultSet>(result);
-}
-
-// Activity_log table
+// activity_log table
 
 void MySQLDatabase::UpdateActivityLog(const uint32_t accountId, const eActivityType activityType, const LWOMAPID mapId) {
-	auto activityUpdate = CreatePreppedStmtUnique("INSERT INTO activity_log (character_id, activity, time, map_id) VALUES (?, ?, ?, ?);");
-	activityUpdate->setUInt(1, accountId);
-	activityUpdate->setUInt(2, static_cast<uint32_t>(activityType));
-	activityUpdate->setUInt(3, static_cast<uint32_t>(time(NULL))); // UNIX_TIMESTAMP()
-	activityUpdate->setUInt(4, mapId);
-	activityUpdate->execute();
+	ExecuteInsert(
+		"INSERT INTO activity_log (character_id, activity, time, map_id) VALUES (?, ?, ?, ?);",
+		accountId,
+		static_cast<uint32_t>(activityType),
+		static_cast<uint32_t>(time(NULL)), // UNIX_TIMESTAMP()
+		mapId);
 }
 
-// Accounts table
+// accounts table
 
 std::optional<UserInfo> MySQLDatabase::GetUserInfo(const std::string_view username) {
-	auto stmt = CreatePreppedStmtUnique("SELECT id, gm_level FROM accounts WHERE name = ? LIMIT 1;");
-	stmt->setString(1, username.data());
-	auto result = ExecuteQueryUnique(stmt);
+	auto result = ExecuteSelect("SELECT id, gm_level FROM accounts WHERE name = ? LIMIT 1;", username);
 
 	if (!result->next()) {
 		return std::nullopt;
@@ -154,39 +131,23 @@ std::optional<UserInfo> MySQLDatabase::GetUserInfo(const std::string_view userna
 }
 
 void MySQLDatabase::UpdateAccountUnmuteTime(const uint32_t accountId, const uint64_t timeToUnmute) {
-	auto userUpdate = CreatePreppedStmtUnique("UPDATE accounts SET mute_expire = ? WHERE id = ?;");
-	userUpdate->setUInt64(1, timeToUnmute);
-	userUpdate->setUInt(2, accountId);
-	userUpdate->executeUpdate();
+	ExecuteUpdate("UPDATE accounts SET mute_expire = ? WHERE id = ?;", timeToUnmute, accountId);
 }
 
 void MySQLDatabase::UpdateAccountBan(const uint32_t accountId, const bool banned) {
-	auto userUpdate = CreatePreppedStmtUnique("UPDATE accounts SET banned = ? WHERE id = ?;");
-	userUpdate->setBoolean(1, banned);
-	userUpdate->setUInt(2, accountId);
-	userUpdate->executeUpdate();
+	ExecuteUpdate("UPDATE accounts SET banned = ? WHERE id = ?;", banned, accountId);
 }
 
 void MySQLDatabase::UpdateAccountPassword(const std::string_view bcryptpassword, const uint32_t accountId) {
-	auto userUpdateStatement = CreatePreppedStmtUnique("UPDATE accounts SET password = ? WHERE id = ?;");
-	userUpdateStatement->setString(1, bcryptpassword.data());
-	userUpdateStatement->setUInt(2, accountId);
-	userUpdateStatement->execute();
+	ExecuteUpdate("UPDATE accounts SET password = ? WHERE id = ?;", bcryptpassword, accountId);
 }
 
 void MySQLDatabase::InsertNewAccount(const std::string_view username, const std::string_view bcryptpassword) {
-	auto statement = CreatePreppedStmtUnique("INSERT INTO accounts (name, password, gm_level) VALUES (?, ?, ?);");
-	statement->setString(1, username.data());
-	statement->setString(2, bcryptpassword.data());
-	statement->setInt(3, static_cast<int32_t>(eGameMasterLevel::OPERATOR));
-	statement->execute();
+	ExecuteInsert("INSERT INTO accounts (name, password, gm_level) VALUES (?, ?, ?);", username, bcryptpassword, static_cast<int32_t>(eGameMasterLevel::OPERATOR));
 }
 
 std::optional<uint32_t> MySQLDatabase::GetAccountId(const std::string_view username) {
-	auto stmt = CreatePreppedStmtUnique("SELECT id FROM accounts WHERE name = ? LIMIT 1;");
-	stmt->setString(1, username.data());
-	auto result = ExecuteQueryUnique(stmt);
-
+	auto result = ExecuteSelect("SELECT id FROM accounts WHERE name = ? LIMIT 1;", username);
 	if (!result->next()) {
 		return std::nullopt;
 	}
@@ -195,10 +156,7 @@ std::optional<uint32_t> MySQLDatabase::GetAccountId(const std::string_view usern
 }
 
 std::optional<AccountInfo> MySQLDatabase::GetAccountDetails(const std::string_view name) {
-	auto stmt = CreatePreppedStmtUnique("SELECT password, banned, locked, play_key_id, gm_level FROM accounts WHERE name=? LIMIT 1;");
-	stmt->setString(1, name.data());
-
-	auto res = ExecuteQueryUnique(stmt);
+	auto res = ExecuteSelect("SELECT password, banned, locked, play_key_id, gm_level FROM accounts WHERE name=? LIMIT 1;", name);
 
 	if (!res->next()) {
 		return std::nullopt;
@@ -215,10 +173,10 @@ std::optional<AccountInfo> MySQLDatabase::GetAccountDetails(const std::string_vi
 	return toReturn;
 }
 
-// CharInfo table
+// charInfo table
 
 std::optional<ApprovedNames> MySQLDatabase::GetApprovedCharacterNames() {
-	auto result = ExecuteQueryUnique("SELECT name FROM charinfo;");
+	auto result = ExecuteSelect("SELECT name FROM charinfo;");
 
 	ApprovedNames toReturn;
 	if (!result->next()) return std::nullopt;
@@ -230,20 +188,17 @@ std::optional<ApprovedNames> MySQLDatabase::GetApprovedCharacterNames() {
 	return toReturn;
 }
 
-std::optional<uint32_t> MySQLDatabase::DoesCharacterExist(const std::string& name) {
-	auto nameQuery(CreatePreppedStmtUnique("SELECT id FROM charinfo WHERE name = ? LIMIT 1;"));
-	nameQuery->setString(1, name);
-	auto result(nameQuery->executeQuery());
+std::optional<uint32_t> MySQLDatabase::DoesCharacterExist(const std::string_view name) {
+	auto result = ExecuteSelect("SELECT id FROM charinfo WHERE name = ? LIMIT 1;", name);
+
 	if (!result->next()) {
 		return std::nullopt;
 	}
 	return result->getUInt("id");
 }
 
-std::optional<uint32_t> MySQLDatabase::GetCharacterIdFromCharacterName(const std::string& name) {
-	auto nameQuery(CreatePreppedStmtUnique("SELECT id FROM charinfo WHERE name = ? LIMIT 1;"));
-	nameQuery->setString(1, name);
-	auto result(nameQuery->executeQuery());
+std::optional<uint32_t> MySQLDatabase::GetCharacterIdFromCharacterName(const std::string_view name) {
+	auto result = ExecuteSelect("SELECT id FROM charinfo WHERE name = ? LIMIT 1;", name);
 
 	if (!result->next()) {
 		return std::nullopt;
@@ -254,9 +209,7 @@ std::optional<uint32_t> MySQLDatabase::GetCharacterIdFromCharacterName(const std
 
 
 std::optional<CharacterInfo> MySQLDatabase::GetCharacterInfo(const uint32_t charId) {
-	auto stmt = CreatePreppedStmtUnique("SELECT name, pending_name, needs_rename, prop_clone_id, permission_map FROM charinfo WHERE id = ? LIMIT 1;");
-	stmt->setUInt(1, charId);
-	auto result = ExecuteQueryUnique(stmt);
+	auto result = ExecuteSelect("SELECT name, pending_name, needs_rename, prop_clone_id, permission_map FROM charinfo WHERE id = ? LIMIT 1;", charId);
 
 	if (!result->next()) {
 		return std::nullopt;
@@ -273,9 +226,7 @@ std::optional<CharacterInfo> MySQLDatabase::GetCharacterInfo(const uint32_t char
 }
 
 std::optional<CharacterInfo> MySQLDatabase::GetCharacterInfo(const std::string_view name) {
-	auto stmt = CreatePreppedStmtUnique("SELECT id, account_id FROM charinfo WHERE id = ? LIMIT 1;");
-	stmt->setString(1, name.data());
-	auto result = ExecuteQueryUnique(stmt);
+	auto result = ExecuteSelect("SELECT id, account_id FROM charinfo WHERE id = ? LIMIT 1;", name);
 
 	if (!result->next()) {
 		return std::nullopt;
@@ -289,9 +240,7 @@ std::optional<CharacterInfo> MySQLDatabase::GetCharacterInfo(const std::string_v
 }
 
 std::optional<uint32_t> MySQLDatabase::GetLastUsedCharacterId(const uint32_t accountId) {
-	auto stmt = CreatePreppedStmtUnique("SELECT id FROM charinfo WHERE account_id = ? ORDER BY last_login DESC LIMIT 1;");
-	stmt->setUInt(1, accountId);
-	auto result = ExecuteQueryUnique(stmt);
+	auto result = ExecuteSelect("SELECT id FROM charinfo WHERE account_id = ? ORDER BY last_login DESC LIMIT 1;", accountId);
 
 	if (!result->next()) {
 		return std::nullopt;
@@ -301,18 +250,12 @@ std::optional<uint32_t> MySQLDatabase::GetLastUsedCharacterId(const uint32_t acc
 }
 
 bool MySQLDatabase::IsUsernameAvailable(const std::string_view username) {
-	auto stmt = CreatePreppedStmtUnique("SELECT id FROM charinfo WHERE name = ? OR pending_name = ? LIMIT 1;");
-	stmt->setString(1, username.data());
-	stmt->setString(2, username.data());
-	auto result = ExecuteQueryUnique(stmt);
-
-	return !result->next();
+	auto res = ExecuteSelect("SELECT id FROM charinfo WHERE name = ? OR pending_name = ? LIMIT 1;", username, username);
+	return res->rowsCount() == 0;
 }
 
 std::vector<uint32_t> MySQLDatabase::GetCharacterIds(const uint32_t accountId) {
-	auto stmt = CreatePreppedStmtUnique("SELECT id FROM charinfo WHERE account_id = ? ORDER BY last_login DESC LIMIT 4;");
-	stmt->setUInt(1, accountId);
-	auto result = ExecuteQueryUnique(stmt);
+	auto result = ExecuteSelect("SELECT id FROM charinfo WHERE account_id = ? ORDER BY last_login DESC LIMIT 4;", accountId);
 
 	std::vector<uint32_t> toReturn;
 	toReturn.reserve(result->rowsCount());
@@ -323,42 +266,23 @@ std::vector<uint32_t> MySQLDatabase::GetCharacterIds(const uint32_t accountId) {
 }
 
 bool MySQLDatabase::IsCharacterIdInUse(const uint32_t characterId) {
-	auto stmt = CreatePreppedStmtUnique("SELECT id FROM charinfo WHERE id = ?;");
-	stmt->setUInt(1, characterId);
-	auto result = ExecuteQueryUnique(stmt);
-
-	return result->next();
+	return ExecuteSelect("SELECT id FROM charinfo WHERE id = ?;", characterId)->rowsCount() != 0;
 }
 
 void MySQLDatabase::SetCharacterName(const uint32_t characterId, const std::string_view name) {
-	auto stmt = CreatePreppedStmtUnique("UPDATE charinfo SET name = ?, pending_name = '', needs_rename = 0, last_login = ? WHERE id = ? LIMIT 1;");
-	stmt->setString(1, name.data());
-	stmt->setUInt64(2, time(NULL)); // UNIX_TIMESTAMP()
-	stmt->setUInt(3, characterId);
-	stmt->executeUpdate();
+	ExecuteUpdate("UPDATE charinfo SET name = ?, pending_name = '', needs_rename = 0, last_login = ? WHERE id = ? LIMIT 1;", name, time(NULL), characterId);
 }
 
 void MySQLDatabase::SetPendingCharacterName(const uint32_t characterId, const std::string_view name) {
-	auto stmt = CreatePreppedStmtUnique("UPDATE charinfo SET pending_name = ?, needs_rename = 0, last_login = ? WHERE id = ? LIMIT 1");
-
-	stmt->setString(1, name.data());
-	stmt->setUInt64(2, time(NULL)); // UNIX_TIMESTAMP()
-	stmt->setUInt(3, characterId);
-
-	stmt->executeUpdate();
+	ExecuteUpdate("UPDATE charinfo SET pending_name = ?, needs_rename = 0, last_login = ? WHERE id = ? LIMIT 1", name, time(NULL), characterId);
 }
 
 void MySQLDatabase::UpdateLastLoggedInCharacter(const uint32_t characterId) {
-	auto stmt = CreatePreppedStmtUnique("UPDATE charinfo SET last_login = ? WHERE id = ? LIMIT 1");
-	stmt->setUInt64(1, time(NULL)); // UNIX_TIMESTAMP()
-	stmt->setUInt(2, characterId);
-	stmt->executeUpdate();
+	ExecuteUpdate("UPDATE charinfo SET last_login = ? WHERE id = ? LIMIT 1", time(NULL), characterId);
 }
 
 std::string MySQLDatabase::GetCharacterNameForCloneId(const uint32_t cloneId) {
-	auto stmt = CreatePreppedStmtUnique("SELECT name FROM charinfo WHERE prop_clone_id = ? LIMIT 1;");
-	stmt->setUInt(1, cloneId);
-	auto result = ExecuteQueryUnique(stmt);
+	auto result = ExecuteSelect("SELECT name FROM charinfo WHERE prop_clone_id = ? LIMIT 1;", cloneId);
 
 	if (!result->next()) {
 		return "";
@@ -368,20 +292,20 @@ std::string MySQLDatabase::GetCharacterNameForCloneId(const uint32_t cloneId) {
 }
 
 void MySQLDatabase::InsertNewCharacter(const uint32_t accountId, const uint32_t characterId, const std::string_view name, const std::string_view pendingName) {
-	auto stmt = CreatePreppedStmtUnique("INSERT INTO `charinfo`(`id`, `account_id`, `name`, `pending_name`, `needs_rename`, `last_login`) VALUES (?,?,?,?,?,?)");
-	stmt->setUInt(1, characterId);
-	stmt->setUInt(2, accountId);
-	stmt->setString(3, name.data());
-	stmt->setString(4, pendingName.data());
-	stmt->setBoolean(5, false);
-	stmt->setUInt64(6, time(NULL)); // UNIX_TIMESTAMP()
-	stmt->execute();
+	ExecuteInsert(
+		"INSERT INTO `charinfo`(`id`, `account_id`, `name`, `pending_name`, `needs_rename`, `last_login`) VALUES (?,?,?,?,?,?)",
+		characterId,
+		accountId,
+		name,
+		pendingName,
+		false,
+		time(NULL));
 }
 
-// Friends table
+// friends table
 
 std::optional<FriendsList> MySQLDatabase::GetFriendsList(const uint32_t charId) {
-	auto stmt = CreatePreppedStmtUnique(
+	auto friendsList = ExecuteSelect(
 		R"QUERY(
 			SELECT fr.requested_player, best_friend, ci.name FROM 
 			(
@@ -392,18 +316,13 @@ std::optional<FriendsList> MySQLDatabase::GetFriendsList(const uint32_t charId) 
 			) AS fr 
 			JOIN charinfo AS ci ON ci.id = fr.requested_player 
 			WHERE fr.requested_player IS NOT NULL AND fr.requested_player != ?;
-		)QUERY");
-	stmt->setUInt(1, charId);
-	stmt->setUInt(2, charId);
-	stmt->setUInt(3, charId);
-
-	FriendsList toReturn;
-
-	auto friendsList = ExecuteQueryUnique(stmt);
+		)QUERY", charId, charId, charId);
 
 	if (!friendsList->next()) {
 		return std::nullopt;
 	}
+
+	FriendsList toReturn;
 
 	toReturn.friends.reserve(friendsList->rowsCount());
 
@@ -419,12 +338,12 @@ std::optional<FriendsList> MySQLDatabase::GetFriendsList(const uint32_t charId) 
 }
 
 std::optional<BestFriendStatus> MySQLDatabase::GetBestFriendStatus(const uint32_t playerAccountId, const uint32_t friendAccountId) {
-	auto friendUpdate = CreatePreppedStmtUnique("SELECT * FROM friends WHERE (player_id = ? AND friend_id = ?) OR (player_id = ? AND friend_id = ?) LIMIT 1;");
-	friendUpdate->setUInt(1, playerAccountId);
-	friendUpdate->setUInt(2, friendAccountId);
-	friendUpdate->setUInt(3, friendAccountId);
-	friendUpdate->setUInt(4, playerAccountId);
-	auto result(ExecuteQueryUnique(friendUpdate));
+	auto result = ExecuteSelect("SELECT * FROM friends WHERE (player_id = ? AND friend_id = ?) OR (player_id = ? AND friend_id = ?) LIMIT 1;",
+		playerAccountId,
+		friendAccountId,
+		friendAccountId,
+		playerAccountId
+	);
 
 	if (!result->next()) {
 		return std::nullopt;
@@ -439,35 +358,32 @@ std::optional<BestFriendStatus> MySQLDatabase::GetBestFriendStatus(const uint32_
 }
 
 void MySQLDatabase::SetBestFriendStatus(const uint32_t playerAccountId, const uint32_t friendAccountId, const uint32_t bestFriendStatus) {
-	auto updateQuery = CreatePreppedStmtUnique("UPDATE friends SET best_friend = ? WHERE (player_id = ? AND friend_id = ?) OR (player_id = ? AND friend_id = ?) LIMIT 1;");
-	updateQuery->setUInt(1, bestFriendStatus);
-	updateQuery->setUInt(2, playerAccountId);
-	updateQuery->setUInt(3, friendAccountId);
-	updateQuery->setUInt(4, friendAccountId);
-	updateQuery->setUInt(5, playerAccountId);
-	updateQuery->executeUpdate();
+	ExecuteUpdate("UPDATE friends SET best_friend = ? WHERE (player_id = ? AND friend_id = ?) OR (player_id = ? AND friend_id = ?) LIMIT 1;",
+		bestFriendStatus,
+		playerAccountId,
+		friendAccountId,
+		friendAccountId,
+		playerAccountId
+	);
 }
 
 void MySQLDatabase::AddFriend(const uint32_t playerAccountId, const uint32_t friendAccountId) {
-	auto friendUpdate = CreatePreppedStmtUnique("INSERT IGNORE INTO friends (player_id, friend_id, best_friend) VALUES (?, ?, 0);");
-	friendUpdate->setUInt(1, playerAccountId);
-	friendUpdate->setUInt(2, friendAccountId);
-	friendUpdate->execute();
+	ExecuteInsert("INSERT IGNORE INTO friends (player_id, friend_id, best_friend) VALUES (?, ?, 0);", playerAccountId, friendAccountId);
 }
 
 void MySQLDatabase::RemoveFriend(const uint32_t playerAccountId, const uint32_t friendAccountId) {
-	auto friendUpdate = CreatePreppedStmtUnique("DELETE FROM friends WHERE (player_id = ? AND friend_id = ?) OR (player_id = ? AND friend_id = ?) LIMIT 1;");
-	friendUpdate->setUInt(1, playerAccountId);
-	friendUpdate->setUInt(2, friendAccountId);
-	friendUpdate->setUInt(3, friendAccountId);
-	friendUpdate->setUInt(4, playerAccountId);
-	friendUpdate->execute();
+	ExecuteDelete("DELETE FROM friends WHERE (player_id = ? AND friend_id = ?) OR (player_id = ? AND friend_id = ?) LIMIT 1;",
+		playerAccountId,
+		friendAccountId,
+		friendAccountId,
+		playerAccountId
+	);
 }
 
-// Ugc table
+// ugc table
 
 void MySQLDatabase::RemoveUnreferencedUgcModels() {
-	auto stmt = ExecuteQueryUnique("DELETE FROM ugc WHERE id NOT IN (SELECT ugc_id FROM properties_contents WHERE ugc_id IS NOT NULL);");
+	ExecuteDelete("DELETE FROM ugc WHERE id NOT IN (SELECT ugc_id FROM properties_contents WHERE ugc_id IS NOT NULL);");
 }
 
 void MySQLDatabase::InsertNewUgcModel(
@@ -475,25 +391,24 @@ void MySQLDatabase::InsertNewUgcModel(
 	const uint32_t blueprintId,
 	const uint32_t accountId,
 	const uint32_t characterId) {
-	auto ugcs = CreatePreppedStmtUnique("INSERT INTO `ugc`(`id`, `account_id`, `character_id`, `is_optimized`, `lxfml`, `bake_ao`, `filename`) VALUES (?,?,?,?,?,?,?)");
-	ugcs->setUInt(1, blueprintId);
-	ugcs->setInt(2, accountId);
-	ugcs->setInt(3, characterId);
-	ugcs->setInt(4, 0);
-
-	ugcs->setBlob(5, &sd0Data);
-	ugcs->setBoolean(6, false);
-	ugcs->setString(7, "weedeater.lxfml");
-	ugcs->execute();
+	const std::istream stream(sd0Data.rdbuf());
+	ExecuteInsert(
+		"INSERT INTO `ugc`(`id`, `account_id`, `character_id`, `is_optimized`, `lxfml`, `bake_ao`, `filename`) VALUES (?,?,?,?,?,?,?)",
+		blueprintId,
+		accountId,
+		characterId,
+		0,
+		&stream,
+		false,
+		"weedeater.lxfml"
+	);
 }
 
 std::vector<UgcModel> MySQLDatabase::GetAllUgcModels(const LWOOBJID& propertyId) {
-	auto stmt = CreatePreppedStmtUnique(
-		"SELECT lxfml, u.id FROM ugc AS u JOIN properties_contents AS pc ON u.id = pc.ugc_id WHERE lot = 14 AND property_id = ? AND pc.ugc_id IS NOT NULL;"
-	);
-	stmt->setUInt64(1, propertyId);
-	auto result = ExecuteQueryUnique(stmt);
-	
+	auto result = ExecuteSelect(
+		"SELECT lxfml, u.id FROM ugc AS u JOIN properties_contents AS pc ON u.id = pc.ugc_id WHERE lot = 14 AND property_id = ? AND pc.ugc_id IS NOT NULL;",
+		propertyId);
+
 	std::vector<UgcModel> toReturn;
 
 	while (result->next()) {
@@ -506,28 +421,21 @@ std::vector<UgcModel> MySQLDatabase::GetAllUgcModels(const LWOOBJID& propertyId)
 		toReturn.push_back(std::move(model));
 	}
 
-	return toReturn; // RVO; allow compiler to elide the return.
+	return toReturn; // move elision
 }
 
 void MySQLDatabase::DeleteUgcModelData(const LWOOBJID& modelId) {
-	auto deleteQuery = CreatePreppedStmtUnique("DELETE FROM ugc WHERE id = ?;");
-	deleteQuery->setUInt64(1, modelId);
-	deleteQuery->execute();
-
-	deleteQuery = CreatePreppedStmtUnique("DELETE FROM properties_contents WHERE ugc_id = ?;");
-	deleteQuery->setUInt64(1, modelId);
-	deleteQuery->execute();
+	ExecuteDelete("DELETE FROM ugc WHERE id = ?;", modelId);
+	ExecuteDelete("DELETE FROM properties_contents WHERE ugc_id = ?;", modelId);
 }
 
 void MySQLDatabase::UpdateUgcModelData(const LWOOBJID& modelId, std::istringstream& lxfml) {
-	auto update = CreatePreppedStmtUnique("UPDATE ugc SET lxfml = ? WHERE id = ?;");
-	update->setBlob(1, &lxfml);
-	update->setUInt64(2, modelId);
-	update->executeUpdate();
+	const std::istream stream(lxfml.rdbuf());
+	auto update = ExecuteUpdate("UPDATE ugc SET lxfml = ? WHERE id = ?;", &stream, modelId);
 }
 
 std::vector<UgcModel> MySQLDatabase::GetUgcModels() {
-	auto result = ExecuteQueryUnique("SELECT id, lxfml FROM ugc;");
+	auto result = ExecuteSelect("SELECT id, lxfml FROM ugc;");
 
 	std::vector<UgcModel> models;
 	models.reserve(result->rowsCount());
@@ -540,33 +448,28 @@ std::vector<UgcModel> MySQLDatabase::GetUgcModels() {
 		model.lxfmlData << blob->rdbuf();
 		models.push_back(std::move(model));
 	}
-	return std::move(models);
+
+	return models;
 }
 
 // migration_history table
 
 void MySQLDatabase::CreateMigrationHistoryTable() {
-	ExecuteQueryUnique("CREATE TABLE IF NOT EXISTS migration_history (name TEXT NOT NULL, date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP());");
+	ExecuteInsert("CREATE TABLE IF NOT EXISTS migration_history (name TEXT NOT NULL, date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP());");
 }
 
 bool MySQLDatabase::IsMigrationRun(const std::string_view str) {
-	auto stmt = CreatePreppedStmtUnique("SELECT name FROM migration_history WHERE name = ?;");
-	stmt->setString(1, str.data());
-	return ExecuteQueryUnique(stmt)->next();
+	return ExecuteSelect("SELECT name FROM migration_history WHERE name = ?;", str)->next();
 }
 
 void MySQLDatabase::InsertMigration(const std::string_view str) {
-	auto stmt = CreatePreppedStmtUnique("INSERT INTO migration_history (name) VALUES (?);");
-	stmt->setString(1, str.data());
-	stmt->execute();
+	auto stmt = ExecuteInsert("INSERT INTO migration_history (name) VALUES (?);", str);
 }
 
-// Charxml table
+// charxml table
 
 std::string MySQLDatabase::GetCharacterXml(const uint32_t charId) {
-	auto stmt = CreatePreppedStmtUnique("SELECT xml_data FROM charxml WHERE id = ? LIMIT 1;");
-	stmt->setUInt(1, charId);
-	auto result = ExecuteQueryUnique(stmt);
+	auto result = ExecuteSelect("SELECT xml_data FROM charxml WHERE id = ? LIMIT 1;", charId);
 
 	if (!result->next()) {
 		return "";
@@ -576,78 +479,40 @@ std::string MySQLDatabase::GetCharacterXml(const uint32_t charId) {
 }
 
 void MySQLDatabase::UpdateCharacterXml(const uint32_t charId, const std::string_view lxfml) {
-	auto stmt = CreatePreppedStmtUnique("UPDATE charxml SET xml_data = ? WHERE id = ?;");
-	stmt->setString(1, lxfml.data());
-	stmt->setUInt(2, charId);
-	stmt->executeUpdate();
+	ExecuteUpdate("UPDATE charxml SET xml_data = ? WHERE id = ?;", lxfml, charId);
 }
 
 void MySQLDatabase::InsertCharacterXml(const uint32_t accountId, const std::string_view lxfml) {
-	auto stmt = CreatePreppedStmtUnique("INSERT INTO `charxml` (`id`, `xml_data`) VALUES (?,?)");
-	stmt->setUInt(1, accountId);
-	stmt->setString(2, lxfml.data());
-	stmt->execute();
+	ExecuteInsert("INSERT INTO `charxml` (`id`, `xml_data`) VALUES (?,?)", accountId, lxfml);
 }
 
 void MySQLDatabase::DeleteCharacter(const uint32_t characterId) {
-	auto stmt = CreatePreppedStmtUnique("DELETE FROM charxml WHERE id=? LIMIT 1;");
-	stmt->setUInt(1, characterId);
-	stmt->execute();
-
-	stmt = CreatePreppedStmtUnique("DELETE FROM command_log WHERE character_id=?;");
-	stmt->setUInt(1, characterId);
-	stmt->execute();
-
-	stmt = CreatePreppedStmtUnique("DELETE FROM friends WHERE player_id=? OR friend_id=?;");
-	stmt->setUInt(1, characterId);
-	stmt->setUInt(2, characterId);
-	stmt->execute();
-
-	stmt = CreatePreppedStmtUnique("DELETE FROM leaderboard WHERE character_id=?;");
-	stmt->setUInt(1, characterId);
-	stmt->execute();
-
-	stmt = CreatePreppedStmtUnique("DELETE FROM properties_contents WHERE property_id IN (SELECT id FROM properties WHERE owner_id=?);");
-	stmt->setUInt(1, characterId);
-	stmt->execute();
-
-	stmt = CreatePreppedStmtUnique("DELETE FROM properties WHERE owner_id=?;");
-	stmt->setUInt(1, characterId);
-	stmt->execute();
-
-	stmt = CreatePreppedStmtUnique("DELETE FROM ugc WHERE character_id=?;");
-	stmt->setUInt(1, characterId);
-	stmt->execute();
-
-	stmt = CreatePreppedStmtUnique("DELETE FROM activity_log WHERE character_id=?;");
-	stmt->setUInt(1, characterId);
-	stmt->execute();
-
-	stmt = CreatePreppedStmtUnique("DELETE FROM mail WHERE receiver_id=?;");
-	stmt->setUInt(1, characterId);
-	stmt->execute();
-
-	stmt = CreatePreppedStmtUnique("DELETE FROM charinfo WHERE id=? LIMIT 1;");
-	stmt->setUInt(1, characterId);
-	stmt->execute();
+	ExecuteDelete("DELETE FROM charxml WHERE id=? LIMIT 1;", characterId);
+	ExecuteDelete("DELETE FROM command_log WHERE character_id=?;", characterId);
+	ExecuteDelete("DELETE FROM friends WHERE player_id=? OR friend_id=?;", characterId, characterId);
+	ExecuteDelete("DELETE FROM leaderboard WHERE character_id=?;", characterId);
+	ExecuteDelete("DELETE FROM properties_contents WHERE property_id IN (SELECT id FROM properties WHERE owner_id=?);", characterId);
+	ExecuteDelete("DELETE FROM properties WHERE owner_id=?;", characterId);
+	ExecuteDelete("DELETE FROM ugc WHERE character_id=?;", characterId);
+	ExecuteDelete("DELETE FROM activity_log WHERE character_id=?;", characterId);
+	ExecuteDelete("DELETE FROM mail WHERE receiver_id=?;", characterId);
+	ExecuteDelete("DELETE FROM charinfo WHERE id=? LIMIT 1;", characterId);
 }
 
-// Pet_names table
+// pet_names table
 
 void MySQLDatabase::SetPetNameModerationStatus(const LWOOBJID& petId, const std::string_view name, const int32_t approvalStatus) {
-	auto stmt = CreatePreppedStmtUnique("INSERT INTO `pet_names` (`id`, `pet_name`, `approved`) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE pet_name = ?, approved = ?;");
-	stmt->setUInt64(1, petId);
-	stmt->setString(2, name.data());
-	stmt->setInt(3, approvalStatus);
-	stmt->setString(4, name.data());
-	stmt->setInt(5, approvalStatus);
-	stmt->execute();
+	auto stmt = ExecuteInsert(
+		"INSERT INTO `pet_names` (`id`, `pet_name`, `approved`) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE pet_name = ?, approved = ?;",
+		petId,
+		name,
+		approvalStatus,
+		name,
+		approvalStatus);
 }
 
 std::optional<PetNameInfo> MySQLDatabase::GetPetNameInfo(const LWOOBJID& petId) {
-	auto stmt = CreatePreppedStmtUnique("SELECT pet_name, approved FROM pet_names WHERE id = ? LIMIT 1;");
-	stmt->setUInt64(1, petId);
-	auto result = ExecuteQueryUnique(stmt);
+	auto result = ExecuteSelect("SELECT pet_name, approved FROM pet_names WHERE id = ? LIMIT 1;", petId);
 
 	if (!result->next()) {
 		return std::nullopt;
@@ -663,13 +528,9 @@ std::optional<PetNameInfo> MySQLDatabase::GetPetNameInfo(const LWOOBJID& petId) 
 // properties table
 
 std::optional<PropertyInfo> MySQLDatabase::GetPropertyInfo(const uint32_t templateId, const LWOCLONEID cloneId) {
-	auto propertyLookup = CreatePreppedStmtUnique(
-		"SELECT id, owner_id, clone_id, name, description, privacy_option, rejection_reason, last_updated, time_claimed, reputation, mod_approved FROM properties WHERE template_id = ? AND clone_id = ?;");
-
-	propertyLookup->setUInt(1, templateId);
-	propertyLookup->setUInt(2, cloneId);
-
-	auto propertyEntry = ExecuteQueryUnique(propertyLookup);
+	auto propertyEntry = ExecuteSelect(
+		"SELECT id, owner_id, clone_id, name, description, privacy_option, rejection_reason, last_updated, time_claimed, reputation, mod_approved "
+		"FROM properties WHERE template_id = ? AND clone_id = ?;", templateId, cloneId);
 
 	if (!propertyEntry->next()) {
 		return std::nullopt;
@@ -692,27 +553,19 @@ std::optional<PropertyInfo> MySQLDatabase::GetPropertyInfo(const uint32_t templa
 }
 
 void MySQLDatabase::UpdatePropertyModerationInfo(const LWOOBJID& id, const uint32_t privacyOption, const std::string_view rejectionReason, const uint32_t modApproved) {
-	auto stmt = CreatePreppedStmtUnique("UPDATE properties SET privacy_option = ?, rejection_reason = ?, mod_approved = ? WHERE id = ? LIMIT 1;");
-	stmt->setUInt(1, privacyOption);
-	stmt->setString(2, rejectionReason.data());
-	stmt->setUInt(3, modApproved);
-	stmt->setUInt64(4, id);
-	stmt->executeUpdate();
+	ExecuteUpdate("UPDATE properties SET privacy_option = ?, rejection_reason = ?, mod_approved = ? WHERE id = ? LIMIT 1;",
+		privacyOption,
+		rejectionReason,
+		modApproved,
+		id);
 }
 
 void MySQLDatabase::UpdatePropertyDetails(const LWOOBJID& id, const std::string_view name, const std::string_view description) {
-	auto stmt = CreatePreppedStmtUnique("UPDATE properties SET name = ?, description = ? WHERE id = ? LIMIT 1;");
-	stmt->setString(1, name.data());
-	stmt->setString(2, description.data());
-	stmt->setUInt64(3, id);
-	stmt->executeUpdate();
+	ExecuteUpdate("UPDATE properties SET name = ?, description = ? WHERE id = ? LIMIT 1;", name, description, id);
 }
 
 std::optional<PropertyModerationInfo> MySQLDatabase::GetPropertyModerationInfo(const LWOOBJID& propertyId) {
-	auto stmt = CreatePreppedStmtUnique("SELECT rejection_reason, mod_approved FROM properties WHERE id = ? LIMIT 1;");
-	stmt->setUInt64(1, propertyId);
-	auto result = ExecuteQueryUnique(stmt);
-
+	auto result = ExecuteSelect("SELECT rejection_reason, mod_approved FROM properties WHERE id = ? LIMIT 1;", propertyId);
 	if (!result->next()) {
 		return std::nullopt;
 	}
@@ -725,11 +578,7 @@ std::optional<PropertyModerationInfo> MySQLDatabase::GetPropertyModerationInfo(c
 }
 
 void MySQLDatabase::UpdatePerformanceCost(const LWOZONEID& zoneId, const float performanceCost) {
-	auto stmt = CreatePreppedStmtUnique("UPDATE properties SET performance_cost = ? WHERE zone_id = ? AND clone_id = ? LIMIT 1;");
-	stmt->setFloat(1, performanceCost);
-	stmt->setUInt(2, zoneId.GetMapID());
-	stmt->setUInt(3, zoneId.GetCloneID());
-	stmt->executeUpdate();
+	ExecuteUpdate("UPDATE properties SET performance_cost = ? WHERE zone_id = ? AND clone_id = ? LIMIT 1;", performanceCost, zoneId.GetMapID(), zoneId.GetCloneID());
 }
 
 void MySQLDatabase::InsertNewProperty(
@@ -740,28 +589,24 @@ void MySQLDatabase::InsertNewProperty(
 	const std::string_view name,
 	const std::string_view description,
 	const uint32_t zoneId) {
-	auto insertion = CreatePreppedStmtUnique(
+	auto insertion = ExecuteInsert(
 		"INSERT INTO properties"
 		"(id, owner_id, template_id, clone_id, name, description, zone_id, rent_amount, rent_due, privacy_option, last_updated, time_claimed, rejection_reason, reputation, performance_cost)"
-		"VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP(), '', 0, 0.0)"
+		"VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP(), '', 0, 0.0)",
+		propertyId,
+		characterId,
+		templateId,
+		cloneId,
+		name,
+		description,
+		zoneId
 	);
-
-	insertion->setUInt64(1, propertyId);
-	insertion->setUInt(2, characterId);
-	insertion->setUInt(3, templateId);
-	insertion->setUInt(4, cloneId);
-	insertion->setString(5, name.data());
-	insertion->setString(6, description.data());
-	insertion->setUInt(7, zoneId);
-	insertion->execute();
 }
 
 // properties_contents table
 
 std::vector<DatabaseModel> MySQLDatabase::GetPropertyModels(const LWOOBJID& propertyId) {
-	auto stmt = CreatePreppedStmtUnique("SELECT id, lot, x, y, z, rx, ry, rz, rw, ugc_id FROM properties_contents WHERE property_id = ?;");
-	stmt->setUInt64(1, propertyId);
-	auto result = ExecuteQueryUnique(stmt);
+	auto result = ExecuteSelect("SELECT id, lot, x, y, z, rx, ry, rz, rw, ugc_id FROM properties_contents WHERE property_id = ?;", propertyId);
 
 	std::vector<DatabaseModel> toReturn;
 	toReturn.reserve(result->rowsCount());
@@ -783,65 +628,38 @@ std::vector<DatabaseModel> MySQLDatabase::GetPropertyModels(const LWOOBJID& prop
 }
 
 void MySQLDatabase::InsertNewPropertyModel(const LWOOBJID& propertyId, const DatabaseModel& model, const std::string_view name) {
-	auto stmt = CreatePreppedStmtUnique(
-		"INSERT INTO properties_contents"
-		"(id, property_id, ugc_id, lot, x, y, z, rx, ry, rz, rw, model_name, model_description, behavior_1, behavior_2, behavior_3, behavior_4, behavior_5)"
-		"VALUES (?,  ?,           ?,      ?,   ?, ?, ?, ?,  ?,  ?,  ?,  ?,    ?,           ?,          ?,          ?,          ?,          ?)"
-		//       1,  2,           3,      4,   5, 6, 7, 8,  9,  10, 11, 12,   13,          14,         15,         16,         17          18
-	);
-
-	stmt->setUInt64(1, model.id);
-	stmt->setUInt64(2, propertyId);
-
-	model.ugcId == 0
-		? stmt->setNull(3, sql::DataType::BIGINT)
-		: stmt->setUInt(3, model.ugcId);
-
-	stmt->setUInt(4, static_cast<uint32_t>(model.lot));
-	stmt->setFloat(5, model.position.x);
-	stmt->setFloat(6, model.position.y);
-	stmt->setFloat(7, model.position.z);
-	stmt->setFloat(8, model.rotation.x);
-	stmt->setFloat(9, model.rotation.y);
-	stmt->setFloat(10, model.rotation.z);
-	stmt->setFloat(11, model.rotation.w);
-	stmt->setString(12, name.data());
-	stmt->setString(13, ""); // Model description.  TODO implement this.
-	stmt->setInt(14, 0); // behavior 1.  TODO implement this.
-	stmt->setInt(15, 0); // behavior 2.  TODO implement this.
-	stmt->setInt(16, 0); // behavior 3.  TODO implement this.
-	stmt->setInt(17, 0); // behavior 4.  TODO implement this.
-	stmt->setInt(18, 0); // behavior 5.  TODO implement this.
 	try {
-		stmt->execute();
+		ExecuteInsert(
+			"INSERT INTO properties_contents"
+			"(id, property_id, ugc_id, lot, x, y, z, rx, ry, rz, rw, model_name, model_description, behavior_1, behavior_2, behavior_3, behavior_4, behavior_5)"
+			"VALUES (?,  ?,           ?,      ?,   ?, ?, ?, ?,  ?,  ?,  ?,  ?,    ?,           ?,          ?,          ?,          ?,          ?)",
+			//       1,  2,           3,      4,   5, 6, 7, 8,  9,  10, 11, 12,   13,          14,         15,         16,         17          18
+			model.id, propertyId, model.ugcId == 0 ? std::nullopt : std::optional(model.ugcId), static_cast<uint32_t>(model.lot),
+			model.position.x, model.position.y, model.position.z, model.rotation.x, model.rotation.y, model.rotation.z, model.rotation.w,
+			name, "", // Model description.  TODO implement this.
+			0, // behavior 1.  TODO implement this.
+			0, // behavior 2.  TODO implement this.
+			0, // behavior 3.  TODO implement this.
+			0, // behavior 4.  TODO implement this.
+			0 // behavior 5.  TODO implement this.
+		);
 	} catch (sql::SQLException& e) {
 		LOG("Error inserting new property model: %s", e.what());
 	}
 }
 
 void MySQLDatabase::UpdateModelPositionRotation(const LWOOBJID& propertyId, const NiPoint3& position, const NiQuaternion& rotation) {
-	auto stmt = CreatePreppedStmtUnique("UPDATE properties_contents SET x = ?, y = ?, z = ?, rx = ?, ry = ?, rz = ?, rw = ? WHERE id = ?;");
-	stmt->setFloat(1, position.x);
-	stmt->setFloat(2, position.y);
-	stmt->setFloat(3, position.z);
-	stmt->setFloat(4, rotation.x);
-	stmt->setFloat(5, rotation.y);
-	stmt->setFloat(6, rotation.z);
-	stmt->setFloat(7, rotation.w);
-	stmt->setUInt64(8, propertyId);
-	stmt->executeUpdate();
+	ExecuteUpdate(
+		"UPDATE properties_contents SET x = ?, y = ?, z = ?, rx = ?, ry = ?, rz = ?, rw = ? WHERE id = ?;",
+		position.x, position.y, position.z, rotation.x, rotation.y, rotation.z, rotation.w, propertyId);
 }
 
 void MySQLDatabase::RemoveModel(const LWOOBJID& modelId) {
-	auto stmt = CreatePreppedStmtUnique("DELETE FROM properties_contents WHERE id = ?;");
-	stmt->setUInt64(1, modelId);
-	stmt->execute();
+	ExecuteDelete("DELETE FROM properties_contents WHERE id = ?;", modelId);
 }
 
 std::vector<LWOOBJID> MySQLDatabase::GetPropertyModelIds(const LWOOBJID& propertyId) {
-	auto stmt = CreatePreppedStmtUnique("SELECT id FROM properties_contents WHERE property_id = ?;");
-	stmt->setUInt64(1, propertyId);
-	auto result = ExecuteQueryUnique(stmt);
+	auto result = ExecuteSelect("SELECT id FROM properties_contents WHERE property_id = ?;", propertyId);
 
 	std::vector<LWOOBJID> toReturn;
 	toReturn.reserve(result->rowsCount());
@@ -859,13 +677,8 @@ void MySQLDatabase::InsertNewBugReport(
 	const std::string_view otherPlayer,
 	const std::string_view selection,
 	const uint32_t characterId) {
-	auto insertBug = CreatePreppedStmtUnique("INSERT INTO `bug_reports`(body, client_version, other_player_id, selection, reporter_id) VALUES (?, ?, ?, ?, ?)");
-	insertBug->setString(1, body.data());
-	insertBug->setString(2, clientVersion.data());
-	insertBug->setString(3, otherPlayer.data());
-	insertBug->setString(4, selection.data());
-	insertBug->setInt(5, characterId);
-	insertBug->execute();
+	ExecuteInsert("INSERT INTO `bug_reports`(body, client_version, other_player_id, selection, reporter_id) VALUES (?, ?, ?, ?, ?)",
+		body, clientVersion, otherPlayer, selection, characterId);
 }
 
 // player_cheat_detections table
@@ -875,37 +688,36 @@ void MySQLDatabase::InsertCheatDetection(
 	const std::string_view username,
 	const std::string_view systemAddress,
 	const std::string_view extraMessage) {
-	auto stmt = CreatePreppedStmtUnique("INSERT INTO player_cheat_detections (account_id, name, violation_msg, violation_system_address) VALUES (?, ?, ?, ?)");
-	userId ? stmt->setInt(1, userId.value()) : stmt->setNull(1, sql::DataType::INTEGER);
-	stmt->setString(2, username.data());
-	stmt->setString(3, extraMessage.data());
-	stmt->setString(4, systemAddress.data());
-	stmt->execute();
+	ExecuteInsert(
+		"INSERT INTO player_cheat_detections (account_id, name, violation_msg, violation_system_address) VALUES (?, ?, ?, ?)",
+		userId, username, extraMessage, systemAddress);
 }
 
 // mail table
 
 void MySQLDatabase::InsertNewMail(const MailInfo& mail) {
-	auto stmt = CreatePreppedStmtUnique(
-		"INSERT INTO `mail`(`sender_id`, `sender_name`, `receiver_id`, `receiver_name`, `time_sent`, `subject`, `body`, `attachment_id`, `attachment_lot`, `attachment_subkey`, `attachment_count`, `was_read`) VALUES (?,?,?,?,?,?,?,?,?,?,?,0)");
-	stmt->setUInt64(1, mail.senderId);
-	stmt->setString(2, mail.senderUsername.c_str());
-	stmt->setUInt(3, mail.receiverId);
-	stmt->setString(4, mail.recipient.c_str());
-	stmt->setUInt64(5, time(NULL));
-	stmt->setString(6, mail.subject);
-	stmt->setString(7, mail.body);
-	stmt->setUInt(8, mail.itemID);
-	stmt->setInt(9, mail.itemLOT);
-	stmt->setInt(10, 0);
-	stmt->setInt(11, mail.itemCount);
-	stmt->execute();
+	ExecuteInsert(
+		"INSERT INTO `mail` "
+		"(`sender_id`, `sender_name`, `receiver_id`, `receiver_name`, `time_sent`, `subject`, `body`, `attachment_id`, `attachment_lot`, `attachment_subkey`, `attachment_count`, `was_read`)"
+		" VALUES (?,?,?,?,?,?,?,?,?,?,?,0)",
+		mail.senderId,
+		mail.senderUsername.c_str(),
+		mail.receiverId,
+		mail.recipient.c_str(),
+		time(NULL),
+		mail.subject,
+		mail.body,
+		mail.itemID,
+		mail.itemLOT,
+		0,
+		mail.itemCount);
 }
 
 std::vector<MailInfo> MySQLDatabase::GetMailForPlayer(const uint32_t numberOfMail, const uint32_t characterId) {
-	auto stmt = CreatePreppedStmtUnique("SELECT id, subject, body, sender_name, attachment_id, attachment_lot, attachment_subkey, attachment_count, was_read, time_sent FROM mail WHERE receiver_id=? limit 20;");
-	stmt->setUInt(1, characterId);
-	auto res = ExecuteQueryUnique(stmt);
+	auto res = ExecuteSelect(
+		"SELECT id, subject, body, sender_name, attachment_id, attachment_lot, attachment_subkey, attachment_count, was_read, time_sent"
+		" FROM mail WHERE receiver_id=? limit 20;",
+		characterId);
 
 	std::vector<MailInfo> toReturn;
 	toReturn.reserve(res->rowsCount());
@@ -930,9 +742,7 @@ std::vector<MailInfo> MySQLDatabase::GetMailForPlayer(const uint32_t numberOfMai
 }
 
 std::optional<MailInfo> MySQLDatabase::GetMail(const uint64_t mailId) {
-	auto stmt = CreatePreppedStmtUnique("SELECT attachment_lot, attachment_count FROM mail WHERE id=? LIMIT 1;");
-	stmt->setUInt64(1, mailId);
-	auto res = ExecuteQueryUnique(stmt);
+	auto res = ExecuteSelect("SELECT attachment_lot, attachment_count FROM mail WHERE id=? LIMIT 1;", mailId);
 
 	if (!res->next()) {
 		return std::nullopt;
@@ -946,9 +756,7 @@ std::optional<MailInfo> MySQLDatabase::GetMail(const uint64_t mailId) {
 }
 
 uint32_t MySQLDatabase::GetUnreadMailCount(const uint32_t characterId) {
-	auto stmt = CreatePreppedStmtUnique("SELECT COUNT(*) as number_unread FROM mail WHERE receiver_id=? AND was_read=0;");
-	stmt->setUInt(1, characterId);
-	auto res = ExecuteQueryUnique(stmt);
+	auto res = ExecuteSelect("SELECT COUNT(*) as number_unread FROM mail WHERE receiver_id=? AND was_read=0;", characterId);
 
 	if (!res->next()) {
 		return 0;
@@ -958,30 +766,21 @@ uint32_t MySQLDatabase::GetUnreadMailCount(const uint32_t characterId) {
 }
 
 void MySQLDatabase::MarkMailRead(const uint64_t mailId) {
-	auto stmt = CreatePreppedStmtUnique("UPDATE mail SET was_read=1 WHERE id=? LIMIT 1;");
-	stmt->setUInt64(1, mailId);
-	stmt->executeUpdate();
+	ExecuteUpdate("UPDATE mail SET was_read=1 WHERE id=? LIMIT 1;", mailId);
 }
 
 void MySQLDatabase::DeleteMail(const uint64_t mailId) {
-	auto stmt = CreatePreppedStmtUnique("DELETE FROM mail WHERE id=? LIMIT 1;");
-	stmt->setUInt64(1, mailId);
-	stmt->execute();
+	ExecuteDelete("DELETE FROM mail WHERE id=? LIMIT 1;", mailId);
 }
 
 void MySQLDatabase::ClaimMailItem(const uint64_t mailId) {
-	auto stmt = CreatePreppedStmtUnique("UPDATE mail SET attachment_lot=0 WHERE id=? LIMIT 1;");
-	stmt->setUInt64(1, mailId);
-	stmt->executeUpdate();
+	ExecuteUpdate("UPDATE mail SET attachment_lot=0 WHERE id=? LIMIT 1;", mailId);
 }
 
 // command_log table
 
 void MySQLDatabase::InsertSlashCommandUsage(const std::string_view command, const uint32_t characterId) {
-	auto stmt = CreatePreppedStmtUnique("INSERT INTO command_log (character_id, command) VALUES (?, ?);");
-	stmt->setUInt(1, characterId);
-	stmt->setString(2, command.data());
-	stmt->execute();
+	ExecuteInsert("INSERT INTO command_log (character_id, command) VALUES (?, ?);", characterId, command);
 }
 
 // servers table
@@ -989,16 +788,12 @@ void MySQLDatabase::InsertSlashCommandUsage(const std::string_view command, cons
 void MySQLDatabase::SetMasterIp(const std::string_view ip, const uint32_t port) {
 	// We only want our 1 entry anyways, so we can just delete all and reinsert the one we want
 	// since it would be two queries anyways.
-	CreatePreppedStmtUnique("TRUNCATE TABLE servers;")->execute();
-	auto stmt = CreatePreppedStmtUnique("INSERT INTO `servers` (`name`, `ip`, `port`, `state`, `version`) VALUES ('master', ?, ?, 0, 171022)");
-	stmt->setString(1, ip.data());
-	stmt->setUInt(2, port);
-	stmt->execute();
+	ExecuteDelete("TRUNCATE TABLE servers;");
+	ExecuteInsert("INSERT INTO `servers` (`name`, `ip`, `port`, `state`, `version`) VALUES ('master', ?, ?, 0, 171022)", ip, port);
 }
 
 std::optional<MasterInfo> MySQLDatabase::GetMasterInfo() {
-
-	auto result = ExecuteQueryUnique("SELECT ip, port FROM servers WHERE name='master' LIMIT 1;");
+	auto result = ExecuteSelect("SELECT ip, port FROM servers WHERE name='master' LIMIT 1;");
 
 	if (!result->next()) {
 		return std::nullopt;
@@ -1015,8 +810,7 @@ std::optional<MasterInfo> MySQLDatabase::GetMasterInfo() {
 // object_id_tracker table
 
 std::optional<uint32_t> MySQLDatabase::GetCurrentPersistentId() {
-	auto stmt = CreatePreppedStmtUnique("SELECT last_object_id FROM object_id_tracker");
-	auto result = stmt->executeQuery();
+	auto result = ExecuteSelect("SELECT last_object_id FROM object_id_tracker");
 	if (!result->next()) {
 		return std::nullopt;
 	}
@@ -1024,21 +818,17 @@ std::optional<uint32_t> MySQLDatabase::GetCurrentPersistentId() {
 }
 
 void MySQLDatabase::InsertDefaultPersistentId() {
-	auto stmt = CreatePreppedStmtUnique("INSERT INTO object_id_tracker VALUES (1);")->execute();
+	ExecuteInsert("INSERT INTO object_id_tracker VALUES (1);");
 }
 
 void MySQLDatabase::UpdatePersistentId(const uint32_t newId) {
-	auto stmt = CreatePreppedStmtUnique("UPDATE object_id_tracker SET last_object_id = ?;");
-	stmt->setUInt(1, newId);
-	stmt->executeUpdate();
+	ExecuteUpdate("UPDATE object_id_tracker SET last_object_id = ?;", newId);
 }
 
 // leaderboard table
 
 std::optional<uint32_t> MySQLDatabase::GetDonationTotal(const uint32_t activityId) {
-	auto query = CreatePreppedStmtUnique("SELECT SUM(primaryScore) as donation_total FROM leaderboard WHERE game_id = ?;");
-	query->setInt(1, activityId);
-	auto donation_total = ExecuteQueryUnique(query);
+	auto donation_total = ExecuteSelect("SELECT SUM(primaryScore) as donation_total FROM leaderboard WHERE game_id = ?;", activityId);
 
 	if (!donation_total->next()) {
 		return std::nullopt;
@@ -1050,9 +840,7 @@ std::optional<uint32_t> MySQLDatabase::GetDonationTotal(const uint32_t activityI
 // play_keys table
 
 std::optional<bool> MySQLDatabase::IsPlaykeyActive(const uint32_t playkeyId) {
-	auto keyCheckStmt = CreatePreppedStmtUnique("SELECT active FROM `play_keys` WHERE id=?");
-	keyCheckStmt->setUInt(1, playkeyId);
-	auto keyCheckRes = ExecuteQueryUnique(keyCheckStmt);
+	auto keyCheckRes = ExecuteSelect("SELECT active FROM `play_keys` WHERE id=?", playkeyId);
 
 	if (!keyCheckRes->next()) {
 		return std::nullopt;
