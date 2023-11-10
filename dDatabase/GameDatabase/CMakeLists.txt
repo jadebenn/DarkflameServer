@@ -1,4 +1,7 @@
-set(DDATABASE_GAMEDATABASE_SOURCES)
+set(DDATABASE_GAMEDATABASE_SOURCES
+	"Database.cpp"
+	"MigrationRunner.cpp"
+)
 
 add_subdirectory(MySQL)
 
