@@ -64,7 +64,7 @@ void AuthPackets::HandleLoginRequest(dServer* server, Packet* packet) {
 	const char* szUsername = username.c_str();
 
 	// Fetch account details
-	auto accountInfo = Database::Get()->GetAccountDetails(username);
+	auto accountInfo = Database::Get()->GetAccountInfo(username);
 
 	if (!accountInfo) {
 		LOG("No user by name %s found!", username.c_str());
@@ -74,14 +74,14 @@ void AuthPackets::HandleLoginRequest(dServer* server, Packet* packet) {
 
 	//If we aren't running in live mode, then only GMs are allowed to enter:
 	const auto& closedToNonDevs = Game::config->GetValue("closed_to_non_devs");
-	if (closedToNonDevs.size() > 0 && bool(std::stoi(closedToNonDevs)) && accountInfo->gmLevel == eGameMasterLevel::CIVILIAN) {
+	if (closedToNonDevs.size() > 0 && bool(std::stoi(closedToNonDevs)) && accountInfo->maxGmLevel == eGameMasterLevel::CIVILIAN) {
 		AuthPackets::SendLoginResponse(server, packet->systemAddress, eLoginResponse::PERMISSIONS_NOT_HIGH_ENOUGH, "The server is currently only open to developers.", "", 2001, username);
 		return;
 	}
 
 	if (Game::config->GetValue("dont_use_keys") != "1") {
 		//Check to see if we have a play key:
-		if (accountInfo->playKeyId == 0 && accountInfo->gmLevel == eGameMasterLevel::CIVILIAN) {
+		if (accountInfo->playKeyId == 0 && accountInfo->maxGmLevel == eGameMasterLevel::CIVILIAN) {
 			AuthPackets::SendLoginResponse(server, packet->systemAddress, eLoginResponse::PERMISSIONS_NOT_HIGH_ENOUGH, "Your account doesn't have a play key associated with it!", "", 2001, username);
 			LOG("User %s tried to log in, but they don't have a play key.", username.c_str());
 			return;
@@ -90,12 +90,12 @@ void AuthPackets::HandleLoginRequest(dServer* server, Packet* packet) {
 		//Check if the play key is _valid_:
 		auto playKeyStatus = Database::Get()->IsPlaykeyActive(accountInfo->playKeyId);
 
-		if (!playKeyStatus || accountInfo->gmLevel == eGameMasterLevel::CIVILIAN) {
+		if (!playKeyStatus || accountInfo->maxGmLevel == eGameMasterLevel::CIVILIAN) {
 			AuthPackets::SendLoginResponse(server, packet->systemAddress, eLoginResponse::PERMISSIONS_NOT_HIGH_ENOUGH, "Your account doesn't have a play key associated with it!", "", 2001, username);
 			return;
 		}
 
-		if (!playKeyStatus.value() && accountInfo->gmLevel == eGameMasterLevel::CIVILIAN) {
+		if (!playKeyStatus.value() && accountInfo->maxGmLevel == eGameMasterLevel::CIVILIAN) {
 			AuthPackets::SendLoginResponse(server, packet->systemAddress, eLoginResponse::PERMISSIONS_NOT_HIGH_ENOUGH, "Your play key has been disabled.", "", 2001, username);
 			LOG("User %s tried to log in, but their play key was disabled", username.c_str());
 			return;

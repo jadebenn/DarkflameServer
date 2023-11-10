@@ -64,9 +64,8 @@ void MySQLDatabase::Destroy(std::string source, bool log) {
 	delete con;
 }
 
-sql::Statement* MySQLDatabase::CreateStmt() {
-	sql::Statement* toReturn = con->createStatement();
-	return toReturn;
+void MySQLDatabase::ExecuteCustomQuery(const std::string_view query) {
+	std::unique_ptr<sql::Statement>(con->createStatement())->execute(query.data());
 }
 
 sql::PreparedStatement* MySQLDatabase::CreatePreppedStmt(const std::string& query) {
@@ -106,26 +105,26 @@ void MySQLDatabase::SetAutoCommit(bool value) {
 // activity_log table
 
 void MySQLDatabase::UpdateActivityLog(const uint32_t accountId, const eActivityType activityType, const LWOMAPID mapId) {
-	ExecuteInsert(
-		"INSERT INTO activity_log (character_id, activity, time, map_id) VALUES (?, ?, ?, ?);",
-		accountId,
-		static_cast<uint32_t>(activityType),
-		static_cast<uint32_t>(time(NULL)), // UNIX_TIMESTAMP()
-		mapId);
+	ExecuteInsert("INSERT INTO activity_log (character_id, activity, time, map_id) VALUES (?, ?, ?, ?);",
+		accountId, static_cast<uint32_t>(activityType), static_cast<uint32_t>(time(NULL)), mapId);
 }
 
 // accounts table
 
-std::optional<UserInfo> MySQLDatabase::GetUserInfo(const std::string_view username) {
-	auto result = ExecuteSelect("SELECT id, gm_level FROM accounts WHERE name = ? LIMIT 1;", username);
+std::optional<AccountInfo> MySQLDatabase::GetAccountInfo(const std::string_view username) {
+	auto result = ExecuteSelect("SELECT id, password, banned, locked, play_key_id, gm_level FROM accounts WHERE name = ? LIMIT 1;", username);
 
 	if (!result->next()) {
 		return std::nullopt;
 	}
 
-	UserInfo toReturn;
-	toReturn.accountId = result->getUInt("id");
-	toReturn.maxGMLevel = static_cast<eGameMasterLevel>(result->getInt("gm_level"));
+	AccountInfo toReturn;
+	toReturn.id = result->getUInt("id");
+	toReturn.maxGmLevel = static_cast<eGameMasterLevel>(result->getInt("gm_level"));
+	toReturn.bcryptPassword = result->getString("password").c_str();
+	toReturn.banned = result->getBoolean("banned");
+	toReturn.locked = result->getBoolean("locked");
+	toReturn.playKeyId = result->getUInt("play_key_id");
 
 	return toReturn;
 }
@@ -144,33 +143,6 @@ void MySQLDatabase::UpdateAccountPassword(const std::string_view bcryptpassword,
 
 void MySQLDatabase::InsertNewAccount(const std::string_view username, const std::string_view bcryptpassword) {
 	ExecuteInsert("INSERT INTO accounts (name, password, gm_level) VALUES (?, ?, ?);", username, bcryptpassword, static_cast<int32_t>(eGameMasterLevel::OPERATOR));
-}
-
-std::optional<uint32_t> MySQLDatabase::GetAccountId(const std::string_view username) {
-	auto result = ExecuteSelect("SELECT id FROM accounts WHERE name = ? LIMIT 1;", username);
-	if (!result->next()) {
-		return std::nullopt;
-	}
-
-	return result->getUInt("id");
-}
-
-std::optional<AccountInfo> MySQLDatabase::GetAccountDetails(const std::string_view name) {
-	auto res = ExecuteSelect("SELECT password, banned, locked, play_key_id, gm_level FROM accounts WHERE name=? LIMIT 1;", name);
-
-	if (!res->next()) {
-		return std::nullopt;
-	}
-
-	AccountInfo toReturn;
-
-	toReturn.bcryptPassword = res->getString("password").c_str();
-	toReturn.banned = res->getBoolean("banned");
-	toReturn.locked = res->getBoolean("locked");
-	toReturn.playKeyId = res->getUInt("play_key_id");
-	toReturn.gmLevel = static_cast<eGameMasterLevel>(res->getInt("gm_level"));
-
-	return toReturn;
 }
 
 // charInfo table

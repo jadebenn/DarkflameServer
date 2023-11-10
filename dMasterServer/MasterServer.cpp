@@ -220,14 +220,14 @@ int main(int argc, char** argv) {
 		std::cout << "Enter a username: ";
 		std::cin >> username;
 
-		auto accountId = Database::Get()->GetAccountId(username);
+		auto accountId = Database::Get()->GetAccountInfo(username);
 		if (accountId) {
 			LOG("Account with name \"%s\" already exists", username.c_str());
 			std::cout << "Do you want to change the password of that account? [y/n]?";
 			std::string prompt = "";
 			std::cin >> prompt;
 			if (prompt == "y" || prompt == "yes") {
-				if (accountId.value() == 0) return EXIT_FAILURE;
+				if (accountId->id == 0) return EXIT_FAILURE;
 
 				//Read the password from the console without echoing it.
 #ifdef __linux__
@@ -247,7 +247,7 @@ int main(int argc, char** argv) {
 				bcryptState = ::bcrypt_hashpw(password.c_str(), salt, hash);
 				assert(bcryptState == 0);
 
-				Database::Get()->UpdateAccountPassword(std::string(hash, BCRYPT_HASHSIZE), accountId.value());
+				Database::Get()->UpdateAccountPassword(std::string(hash, BCRYPT_HASHSIZE), accountId->id);
 
 				LOG("Account \"%s\" password updated successfully!", username.c_str());
 			} else {

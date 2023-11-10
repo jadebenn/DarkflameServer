@@ -6,8 +6,6 @@
 
 #include "GameDatabase.h"
 
-
-
 typedef std::unique_ptr<sql::PreparedStatement>& UniquePreppedStmtRef;
 
 // Purposefully no definition for this to provide linker errors in the case someone tries to
@@ -28,11 +26,11 @@ public:
 	void Connect() override;
 	void Destroy(std::string source = "", bool log = true) override;
 
-	sql::Statement* CreateStmt() override;
 	sql::PreparedStatement* CreatePreppedStmt(const std::string& query) override;
 	void Commit() override;
 	bool GetAutoCommit() override;
 	void SetAutoCommit(bool value) override;
+	void ExecuteCustomQuery(const std::string_view query) override;
 
 	// Overloaded queries
 	std::optional<DatabaseStructs::MasterInfo> GetMasterInfo() override;
@@ -60,7 +58,7 @@ public:
 	std::optional<DatabaseStructs::CharacterInfo> GetCharacterInfo(const std::string_view charId) override;
 	std::string GetCharacterXml(const uint32_t accountId) override;
 	void UpdateCharacterXml(const uint32_t accountId, const std::string_view lxfml) override;
-	std::optional<DatabaseStructs::UserInfo> GetUserInfo(const std::string_view username) override;
+	std::optional<DatabaseStructs::AccountInfo> GetAccountInfo(const std::string_view username) override;
 	std::optional<uint32_t> GetLastUsedCharacterId(uint32_t accountId) override;
 	bool IsUsernameAvailable(const std::string_view username) override;
 	void InsertNewCharacter(const uint32_t accountId, const uint32_t characterId, const std::string_view name, const std::string_view pendingName) override;
@@ -122,12 +120,10 @@ public:
 	void UpdateAccountPassword(const std::string_view bcryptpassword, const uint32_t accountId) override;
 	void InsertNewAccount(const std::string_view username, const std::string_view bcryptpassword) override;
 	void SetMasterIp(const std::string_view ip, const uint32_t port) override;
-	std::optional<uint32_t> GetAccountId(const std::string_view username) override;
 	std::optional<uint32_t> GetCurrentPersistentId() override;
 	void InsertDefaultPersistentId() override;
 	void UpdatePersistentId(const uint32_t id) override;
 	std::optional<uint32_t> GetDonationTotal(const uint32_t activityId) override;
-	std::optional<DatabaseStructs::AccountInfo> GetAccountDetails(const std::string_view name) override;
 	std::optional<bool> IsPlaykeyActive(const uint32_t playkeyId) override;
 	std::vector<DatabaseStructs::UgcModel> GetAllUgcModels(const LWOOBJID& propertyId) override;
 private:

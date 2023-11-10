@@ -23,10 +23,10 @@ User::User(const SystemAddress& sysAddr, const std::string& username, const std:
 
 	m_IsBestFriendMap = std::unordered_map<std::string, bool>();
 
-	auto userInfo = Database::Get()->GetUserInfo(username);
+	auto userInfo = Database::Get()->GetAccountInfo(username);
 	if (userInfo) {
-		m_AccountID = userInfo->accountId;
-		m_MaxGMLevel = userInfo->maxGMLevel;
+		m_AccountID = userInfo->id;
+		m_MaxGMLevel = userInfo->maxGmLevel;
 		m_MuteExpire = 0; //res->getUInt64(3);
 	}
 

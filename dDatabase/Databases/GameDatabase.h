@@ -14,11 +14,11 @@ public:
 	// TODO: These should be made private.
 	virtual void Connect() = 0;
 	virtual void Destroy(std::string source = "", bool log = true) = 0;
-	virtual sql::Statement* CreateStmt() = 0;
 	virtual sql::PreparedStatement* CreatePreppedStmt(const std::string& query) = 0;
 	virtual void Commit() = 0;
 	virtual bool GetAutoCommit() = 0;
 	virtual void SetAutoCommit(bool value) = 0;
+	virtual void ExecuteCustomQuery(const std::string_view query) = 0;
 
 	virtual std::optional<DatabaseStructs::MasterInfo> GetMasterInfo() = 0;
 	virtual std::optional<DatabaseStructs::ApprovedNames> GetApprovedCharacterNames() = 0;
@@ -40,7 +40,7 @@ public:
 	virtual std::optional<DatabaseStructs::CharacterInfo> GetCharacterInfo(const std::string_view name) = 0;
 	virtual std::string GetCharacterXml(const uint32_t charId) = 0;
 	virtual void UpdateCharacterXml(const uint32_t charId, const std::string_view lxfml) = 0;
-	virtual std::optional<DatabaseStructs::UserInfo> GetUserInfo(const std::string_view username) = 0;
+	virtual std::optional<DatabaseStructs::AccountInfo> GetAccountInfo(const std::string_view username) = 0;
 	virtual std::optional<uint32_t> GetLastUsedCharacterId(const uint32_t accountId) = 0;
 	virtual bool IsUsernameAvailable(const std::string_view username) = 0;
 	virtual void InsertNewCharacter(const uint32_t accountId, const uint32_t characterId, const std::string_view name, const std::string_view pendingName) = 0;
@@ -103,12 +103,10 @@ public:
 	virtual void UpdateAccountPassword(const std::string_view bcryptpassword, const uint32_t accountId) = 0;
 	virtual void InsertNewAccount(const std::string_view username, const std::string_view bcryptpassword) = 0;
 	virtual void SetMasterIp(const std::string_view ip, const uint32_t port) = 0;
-	virtual std::optional<uint32_t> GetAccountId(const std::string_view username) = 0;
 	virtual std::optional<uint32_t> GetCurrentPersistentId() = 0;
 	virtual void InsertDefaultPersistentId() = 0;
 	virtual void UpdatePersistentId(const uint32_t id) = 0;
 	virtual std::optional<uint32_t> GetDonationTotal(const uint32_t activityId) = 0;
-	virtual std::optional<DatabaseStructs::AccountInfo> GetAccountDetails(const std::string_view name) = 0;
 
 	// optional to show if the playkey even existed, bool to show if it was active
 	virtual std::optional<bool> IsPlaykeyActive(const uint32_t playkeyId) = 0;

@@ -20,7 +20,7 @@ enum class eActivityType : uint32_t {
 namespace DatabaseStructs {
 	struct MasterInfo {
 		std::string ip;
-		uint32_t port;
+		uint32_t port{};
 	};
 
 	struct ApprovedNames {
@@ -32,14 +32,14 @@ namespace DatabaseStructs {
 	};
 
 	struct BestFriendStatus {
-		uint32_t playerAccountId;
-		uint32_t friendAccountId;
-		uint32_t bestFriendStatus;
+		uint32_t playerAccountId{};
+		uint32_t friendAccountId{};
+		uint32_t bestFriendStatus{};
 	};
 
 	struct UgcModel {
-		LWOOBJID id;
 		std::stringstream lxfmlData;
+		LWOOBJID id{};
 	};
 
 	struct CharacterInfo {
@@ -52,41 +52,36 @@ namespace DatabaseStructs {
 		ePermissionMap permissionMap{};
 	};
 
-	struct UserInfo {
-		uint32_t accountId;
-		eGameMasterLevel maxGMLevel;
-	};
-
 	struct PetNameInfo {
 		std::string petName;
-		int32_t approvalStatus;
+		int32_t approvalStatus{};
 	};
 
 	struct PropertyInfo {
-		LWOOBJID id;
-		LWOOBJID ownerId;
-		LWOCLONEID cloneId;
 		std::string name;
 		std::string description;
-		int32_t privacyOption;
 		std::string rejectionReason;
-		uint32_t modApproved;
-		uint32_t lastUpdatedTime;
-		uint32_t claimedTime;
-		uint32_t reputation;
+		LWOOBJID id{};
+		LWOOBJID ownerId{};
+		LWOCLONEID cloneId{};
+		int32_t privacyOption{};
+		uint32_t modApproved{};
+		uint32_t lastUpdatedTime{};
+		uint32_t claimedTime{};
+		uint32_t reputation{};
 	};
 
 	struct DatabaseModel {
-		LWOOBJID id;
-		LOT lot;
 		NiPoint3 position;
 		NiQuaternion rotation;
-		uint32_t ugcId;
+		LWOOBJID id{};
+		LOT lot{};
+		uint32_t ugcId{};
 	};
 
 	struct PropertyModerationInfo {
 		std::string rejectionReason;
-		uint32_t modApproved;
+		uint32_t modApproved{};
 	};
 
 	struct MailInfo {
@@ -109,10 +104,11 @@ namespace DatabaseStructs {
 
 	struct AccountInfo {
 		std::string bcryptPassword;
+		uint32_t id{};
 		uint32_t playKeyId{};
 		bool banned{};
 		bool locked{};
-		eGameMasterLevel gmLevel{};
+		eGameMasterLevel maxGmLevel{};
 	};
 };
 

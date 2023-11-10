@@ -874,7 +874,7 @@ void HandlePacket(Packet* packet) {
 
 		// If the check is turned on, validate the client's database checksum.
 		if (Game::config->GetValue("check_fdb") == "1" && !databaseChecksum.empty()) {
-			auto accountInfo = Database::Get()->GetAccountDetails(username);
+			auto accountInfo = Database::Get()->GetAccountInfo(username);
 			if (!accountInfo) {
 				LOG("Client's account does not exist in the database, aborting connection.");
 				Game::server->Disconnect(packet->systemAddress, eServerDisconnectIdentifiers::CHARACTER_NOT_FOUND);
@@ -882,7 +882,7 @@ void HandlePacket(Packet* packet) {
 			}
 
 			// Developers may skip this check
-			if (accountInfo->gmLevel < eGameMasterLevel::DEVELOPER && clientDatabaseChecksum != databaseChecksum) {
+			if (accountInfo->maxGmLevel < eGameMasterLevel::DEVELOPER && clientDatabaseChecksum != databaseChecksum) {
 				LOG("Client's database checksum does not match the server's, aborting connection.");
 				Game::server->Disconnect(packet->systemAddress, eServerDisconnectIdentifiers::WRONG_GAME_VERSION);
 				return;
