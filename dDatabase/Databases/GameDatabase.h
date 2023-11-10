@@ -41,12 +41,9 @@ public:
 	virtual std::string GetCharacterXml(const uint32_t charId) = 0;
 	virtual void UpdateCharacterXml(const uint32_t charId, const std::string_view lxfml) = 0;
 	virtual std::optional<DatabaseStructs::AccountInfo> GetAccountInfo(const std::string_view username) = 0;
-	virtual std::optional<uint32_t> GetLastUsedCharacterId(const uint32_t accountId) = 0;
-	virtual bool IsUsernameAvailable(const std::string_view username) = 0;
 	virtual void InsertNewCharacter(const uint32_t accountId, const uint32_t characterId, const std::string_view name, const std::string_view pendingName) = 0;
 	virtual void InsertCharacterXml(const uint32_t accountId, const std::string_view lxfml) = 0;
 	virtual std::vector<uint32_t> GetCharacterIds(uint32_t accountId) = 0;
-	virtual bool IsCharacterIdInUse(const uint32_t characterId) = 0;
 	virtual void DeleteCharacter(const uint32_t characterId) = 0;
 	virtual void SetCharacterName(const uint32_t characterId, const std::string_view name) = 0;
 	virtual void SetPendingCharacterName(const uint32_t characterId, const std::string_view name) = 0;
@@ -71,7 +68,6 @@ public:
 	virtual void UpdateModelPositionRotation(const LWOOBJID& propertyId, const NiPoint3& position, const NiQuaternion& rotation) = 0;
 	virtual void RemoveModel(const LWOOBJID& modelId) = 0;
 	virtual std::vector<LWOOBJID> GetPropertyModelIds(const LWOOBJID& propertyId) = 0;
-	virtual std::string GetCharacterNameForCloneId(const uint32_t cloneId) = 0;
 	virtual std::optional<DatabaseStructs::PropertyModerationInfo> GetPropertyModerationInfo(const LWOOBJID& propertyId) = 0;
 	virtual void UpdatePerformanceCost(const LWOZONEID& zoneId, const float performanceCost) = 0;
 	virtual void InsertNewBugReport(

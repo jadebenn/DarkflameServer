@@ -179,51 +179,34 @@ std::optional<uint32_t> MySQLDatabase::GetCharacterIdFromCharacterName(const std
 	return result->getUInt(1);
 }
 
-
-std::optional<CharacterInfo> MySQLDatabase::GetCharacterInfo(const uint32_t charId) {
-	auto result = ExecuteSelect("SELECT name, pending_name, needs_rename, prop_clone_id, permission_map FROM charinfo WHERE id = ? LIMIT 1;", charId);
-
-	if (!result->next()) {
+std::optional<CharacterInfo> CharInfoFromQueryResult(std::unique_ptr<sql::ResultSet> stmt) {
+	if (!stmt->next()) {
 		return std::nullopt;
 	}
 
 	CharacterInfo toReturn;
-	toReturn.name = result->getString("name").c_str();
-	toReturn.pendingName = result->getString("pending_name").c_str();
-	toReturn.needsRename = result->getBoolean("needs_rename");
-	toReturn.cloneId = result->getUInt64("prop_clone_id");
-	toReturn.permissionMap = static_cast<ePermissionMap>(result->getUInt("permission_map"));
+
+	toReturn.id = stmt->getUInt("id");
+	toReturn.name = stmt->getString("name").c_str();
+	toReturn.pendingName = stmt->getString("pending_name").c_str();
+	toReturn.needsRename = stmt->getBoolean("needs_rename");
+	toReturn.cloneId = stmt->getUInt64("prop_clone_id");
+	toReturn.accountId = stmt->getUInt("account_id");
+	toReturn.permissionMap = static_cast<ePermissionMap>(stmt->getUInt("permission_map"));
 
 	return toReturn;
+}
+
+std::optional<CharacterInfo> MySQLDatabase::GetCharacterInfo(const uint32_t charId) {
+	return CharInfoFromQueryResult(
+		ExecuteSelect("SELECT name, pending_name, needs_rename, prop_clone_id, permission_map, id, account_id FROM charinfo WHERE id = ? LIMIT 1;", charId)
+	);
 }
 
 std::optional<CharacterInfo> MySQLDatabase::GetCharacterInfo(const std::string_view name) {
-	auto result = ExecuteSelect("SELECT id, account_id FROM charinfo WHERE id = ? LIMIT 1;", name);
-
-	if (!result->next()) {
-		return std::nullopt;
-	}
-
-	CharacterInfo toReturn;
-	toReturn.id = result->getUInt("id");
-	toReturn.accountId = result->getUInt("account_id");
-
-	return toReturn;
-}
-
-std::optional<uint32_t> MySQLDatabase::GetLastUsedCharacterId(const uint32_t accountId) {
-	auto result = ExecuteSelect("SELECT id FROM charinfo WHERE account_id = ? ORDER BY last_login DESC LIMIT 1;", accountId);
-
-	if (!result->next()) {
-		return std::nullopt;
-	}
-
-	return result->getUInt("id");
-}
-
-bool MySQLDatabase::IsUsernameAvailable(const std::string_view username) {
-	auto res = ExecuteSelect("SELECT id FROM charinfo WHERE name = ? OR pending_name = ? LIMIT 1;", username, username);
-	return res->rowsCount() == 0;
+	return CharInfoFromQueryResult(
+		ExecuteSelect("SELECT name, pending_name, needs_rename, prop_clone_id, permission_map, id, account_id FROM charinfo WHERE name = ? LIMIT 1;", name)
+	);
 }
 
 std::vector<uint32_t> MySQLDatabase::GetCharacterIds(const uint32_t accountId) {
@@ -234,11 +217,19 @@ std::vector<uint32_t> MySQLDatabase::GetCharacterIds(const uint32_t accountId) {
 	while (result->next()) {
 		toReturn.push_back(result->getUInt("id"));
 	}
+
 	return toReturn;
 }
 
-bool MySQLDatabase::IsCharacterIdInUse(const uint32_t characterId) {
-	return ExecuteSelect("SELECT id FROM charinfo WHERE id = ?;", characterId)->rowsCount() != 0;
+void MySQLDatabase::InsertNewCharacter(const uint32_t accountId, const uint32_t characterId, const std::string_view name, const std::string_view pendingName) {
+	ExecuteInsert(
+		"INSERT INTO `charinfo`(`id`, `account_id`, `name`, `pending_name`, `needs_rename`, `last_login`) VALUES (?,?,?,?,?,?)",
+		characterId,
+		accountId,
+		name,
+		pendingName,
+		false,
+		time(NULL));
 }
 
 void MySQLDatabase::SetCharacterName(const uint32_t characterId, const std::string_view name) {
@@ -251,27 +242,6 @@ void MySQLDatabase::SetPendingCharacterName(const uint32_t characterId, const st
 
 void MySQLDatabase::UpdateLastLoggedInCharacter(const uint32_t characterId) {
 	ExecuteUpdate("UPDATE charinfo SET last_login = ? WHERE id = ? LIMIT 1", time(NULL), characterId);
-}
-
-std::string MySQLDatabase::GetCharacterNameForCloneId(const uint32_t cloneId) {
-	auto result = ExecuteSelect("SELECT name FROM charinfo WHERE prop_clone_id = ? LIMIT 1;", cloneId);
-
-	if (!result->next()) {
-		return "";
-	}
-
-	return result->getString("name").c_str();
-}
-
-void MySQLDatabase::InsertNewCharacter(const uint32_t accountId, const uint32_t characterId, const std::string_view name, const std::string_view pendingName) {
-	ExecuteInsert(
-		"INSERT INTO `charinfo`(`id`, `account_id`, `name`, `pending_name`, `needs_rename`, `last_login`) VALUES (?,?,?,?,?,?)",
-		characterId,
-		accountId,
-		name,
-		pendingName,
-		false,
-		time(NULL));
 }
 
 // friends table

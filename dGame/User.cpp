@@ -32,12 +32,13 @@ User::User(const SystemAddress& sysAddr, const std::string& username, const std:
 
 	//If we're loading a zone, we'll load the last used (aka current) character:
 	if (Game::server->GetZoneID() != 0) {
-		auto lastUsedCharacter = Database::Get()->GetLastUsedCharacterId(m_AccountID);
-		if (lastUsedCharacter) {
-			Character* character = new Character(lastUsedCharacter.value(), this);
+		auto characterList = Database::Get()->GetCharacterIds(m_AccountID);
+		if (!characterList.empty()) {
+			const uint32_t lastUsedCharacterId = characterList.front();
+			Character* character = new Character(lastUsedCharacterId, this);
 			character->UpdateFromDatabase();
 			m_Characters.push_back(character);
-			LOG("Loaded %i as it is the last used char", lastUsedCharacter.value());
+			LOG("Loaded %i as it is the last used char", lastUsedCharacterId);
 		}
 	}
 }

@@ -59,12 +59,9 @@ public:
 	std::string GetCharacterXml(const uint32_t accountId) override;
 	void UpdateCharacterXml(const uint32_t accountId, const std::string_view lxfml) override;
 	std::optional<DatabaseStructs::AccountInfo> GetAccountInfo(const std::string_view username) override;
-	std::optional<uint32_t> GetLastUsedCharacterId(uint32_t accountId) override;
-	bool IsUsernameAvailable(const std::string_view username) override;
 	void InsertNewCharacter(const uint32_t accountId, const uint32_t characterId, const std::string_view name, const std::string_view pendingName) override;
 	void InsertCharacterXml(const uint32_t accountId, const std::string_view lxfml) override;
 	std::vector<uint32_t> GetCharacterIds(uint32_t accountId) override;
-	bool IsCharacterIdInUse(const uint32_t characterId) override;
 	void DeleteCharacter(const uint32_t characterId) override;
 	void SetCharacterName(const uint32_t characterId, const std::string_view name) override;
 	void SetPendingCharacterName(const uint32_t characterId, const std::string_view name) override;
@@ -88,7 +85,6 @@ public:
 	void UpdateModelPositionRotation(const LWOOBJID& propertyId, const NiPoint3& position, const NiQuaternion& rotation) override;
 	void RemoveModel(const LWOOBJID& modelId) override;
 	std::vector<LWOOBJID> GetPropertyModelIds(const LWOOBJID& propertyId) override;
-	std::string GetCharacterNameForCloneId(const uint32_t cloneId) override;
 	std::optional<DatabaseStructs::PropertyModerationInfo> GetPropertyModerationInfo(const LWOOBJID& propertyId) override;
 	void UpdatePerformanceCost(const LWOZONEID& zoneId, const float performanceCost) override;
 	void InsertNewBugReport(

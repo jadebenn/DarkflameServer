@@ -660,17 +660,15 @@ void PropertyManagementComponent::OnQueryPropertyData(Entity* originator, const 
 	const auto isClaimed = GetOwnerId() != LWOOBJID_EMPTY;
 
 	LWOOBJID ownerId = GetOwnerId();
-	std::string ownerName = "";
+	std::string ownerName;
+	auto charInfo = Database::Get()->GetCharacterInfo(ownerId);
+	if (charInfo) ownerName = charInfo->name;
 	std::string name = "";
 	std::string description = "";
 	uint64_t claimed = 0;
 	char privacy = 0;
 
 	if (isClaimed) {
-		const auto cloneId = worldId.GetCloneID();
-
-		ownerName = Database::Get()->GetCharacterNameForCloneId(cloneId);
-
 		name = propertyName;
 		description = propertyDescription;
 		claimed = claimedTime;
