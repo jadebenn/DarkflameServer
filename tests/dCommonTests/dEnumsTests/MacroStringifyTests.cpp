@@ -2,11 +2,19 @@
 
 #include "Logger.h"
 #include "Game.h"
+#include "eGameMessageType.h"
 #include "eWorldMessageType.h"
 #include <chrono>
 
-#define log_test(y, z) LOG("%s %s", StringifiedEnum::ToString(static_cast<eWorldMessageType>(y)), #z); ASSERT_EQ(StringifiedEnum::ToString(static_cast<eWorldMessageType>(y)), #z);
-#define log_test_invalid(y) LOG("%s", StringifiedEnum::ToString(static_cast<eWorldMessageType>(y))); ASSERT_EQ(StringifiedEnum::ToString(static_cast<eWorldMessageType>(y)), "<none>");
+/************* World Message Tests *************/
+
+#define log_test(y, z)\
+	LOG("%s %s", StringifiedEnum::ToString(static_cast<eWorldMessageType>(y)), #z);\
+	ASSERT_STREQ(StringifiedEnum::ToString(static_cast<eWorldMessageType>(y)), #z);
+
+#define log_test_invalid(y)\
+	LOG("%s", StringifiedEnum::ToString(static_cast<eWorldMessageType>(y)));\
+	ASSERT_STREQ(StringifiedEnum::ToString(static_cast<eWorldMessageType>(y)), "<none>");
 
 TEST(StringifiedMacroTest, eWorldMessageTypeMacroTest) {
 	Game::logger = new Logger("./MacroTest.log", true, true);
@@ -58,3 +66,59 @@ TEST(StringifiedMacroTest, eWorldMessageTypeMacroTest) {
 
 	delete Game::logger;
 }
+
+#undef log_test
+#undef log_test_invalid
+
+/************* Game Message Tests *************/
+
+#define log_test(y, z)\
+	LOG("%s %s", StringifiedEnum::ToString(static_cast<eGameMessageType>(y)), #z);\
+	ASSERT_STREQ(StringifiedEnum::ToString(static_cast<eGameMessageType>(y)), #z);
+
+#define log_test_invalid(y)\
+	LOG("%s", StringifiedEnum::ToString(static_cast<eGameMessageType>(y)));\
+	ASSERT_STREQ(StringifiedEnum::ToString(static_cast<eGameMessageType>(y)), "<none>");
+
+TEST(StringifiedMacroTest, eGameMessageTypeMacroTest) {
+	Game::logger = new Logger("./MacroTest.log", true, true);
+	
+	// Only doing the first and last 10 for the sake of my sanity
+	log_test(0, GET_POSITION);
+	log_test(1, GET_ROTATION);
+	log_test(2, GET_LINEAR_VELOCITY);
+	log_test(3, GET_ANGULAR_VELOCITY);
+	log_test(4, GET_FORWARD_VELOCITY);
+	log_test(5, GET_PLAYER_FORWARD);
+	log_test(6, GET_FORWARD_VECTOR);
+	log_test(7, SET_POSITION);
+	log_test(8, SET_LOCAL_POSITION);
+	log_test(9, SET_ROTATION);
+	log_test(10, SET_LINEAR_VELOCITY);
+	log_test(1762, USE_SKILL_SET);
+	log_test(1763, SET_SKILL_SET_POSSESSOR);
+	log_test(1764, POPULATE_ACTION_BAR);
+	log_test(1765, GET_COMPONENT_TEMPLATE_ID);
+	log_test(1766, GET_POSSESSABLE_SKILL_SET);
+	log_test(1767, MARK_INVENTORY_ITEM_AS_ACTIVE);
+	log_test(1768, UPDATE_FORGED_ITEM);
+	log_test(1769, CAN_ITEMS_BE_REFORGED);
+	log_test(1771, NOTIFY_CLIENT_RAIL_START_FAILED);
+	log_test(1772, GET_IS_ON_RAIL);
+	log_test_invalid(1776);
+
+	auto begin = std::chrono::high_resolution_clock::now();
+	for (int i = 0; i < 10000000; ++i) {
+		volatile auto f = StringifiedEnum::ToString(static_cast<eGameMessageType>(i));
+
+		// To ensure the compiler doesn't optimize out the call, I print it at random intervals
+		if (rand() % 100000 == 0) LOG("%i, %s", i, f);
+	}
+	auto end = std::chrono::high_resolution_clock::now();
+	LOG("Time: %lld", std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count());
+
+	delete Game::logger;
+}
+
+#undef log_test
+#undef log_test_invalid

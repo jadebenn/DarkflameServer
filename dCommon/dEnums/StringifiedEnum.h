@@ -87,9 +87,22 @@
 	#define END_STRINGIFIED_ENUM(ENUM_NAME, DATA_TYPE)\
 			};\
 			static bool sorted = false;\
-			if (!sorted) std::sort(sv.begin(), sv.end(), [&](const std::pair<DATA_TYPE, const char*>& lhs, const std::pair<DATA_TYPE, const char*>& rhs) { return lhs.first < rhs.first; });\
+			if (!sorted) std::sort(\
+				sv.begin(),\
+				sv.end(),\
+				[&](const std::pair<DATA_TYPE, const char*>& lhs,\
+				const std::pair<DATA_TYPE, const char*>& rhs)\
+				{ return lhs.first < rhs.first; }\
+			);\
 			sorted = true;\
-			const auto it = std::lower_bound(sv.begin(), sv.end(), static_cast<DATA_TYPE>(value), [&](const std::pair<DATA_TYPE, const char*>& lhs, const DATA_TYPE rhs) { return lhs.first < rhs; });\
+			const auto it = std::lower_bound(\
+				sv.begin(),\
+				sv.end(),\
+				static_cast<DATA_TYPE>(value),\
+				[&](const std::pair<DATA_TYPE, const char*>& lhs,\
+				const DATA_TYPE rhs)\
+				{ return lhs.first < rhs; }\
+			);\
 			return it != sv.end() ? it->second : "<none>";\
 		}
 
