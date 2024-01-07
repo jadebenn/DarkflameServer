@@ -7,18 +7,18 @@
 #include "BehaviorStates.h"
 #include "ControlBehaviorMsgs.h"
 
-ModelComponent::ModelComponent(Entity* parent) : Component(parent) {
-	m_OriginalPosition = m_Parent->GetDefaultPosition();
-	m_OriginalRotation = m_Parent->GetDefaultRotation();
+ModelComponent::ModelComponent(Entity& parent) : Component(parent) {
+	m_OriginalPosition = m_Parent.GetDefaultPosition();
+	m_OriginalRotation = m_Parent.GetDefaultRotation();
 
-	m_userModelID = m_Parent->GetVarAs<LWOOBJID>(u"userModelID");
+	m_userModelID = m_Parent.GetVarAs<LWOOBJID>(u"userModelID");
 }
 
 void ModelComponent::Serialize(RakNet::BitStream* outBitStream, bool bIsInitialUpdate) {
 	// ItemComponent Serialization.  Pets do not get this serialization.
-	if (!m_Parent->HasComponent(eReplicaComponentType::PET)) {
+	if (!m_Parent.HasComponent(eReplicaComponentType::PET)) {
 		outBitStream->Write1();
-		outBitStream->Write<LWOOBJID>(m_userModelID != LWOOBJID_EMPTY ? m_userModelID : m_Parent->GetObjectID());
+		outBitStream->Write<LWOOBJID>(m_userModelID != LWOOBJID_EMPTY ? m_userModelID : m_Parent.GetObjectID());
 		outBitStream->Write<int>(0);
 		outBitStream->Write0();
 	}
@@ -41,7 +41,7 @@ void ModelComponent::UpdatePendingBehaviorId(const int32_t newId) {
 }
 
 void ModelComponent::SendBehaviorListToClient(AMFArrayValue& args) const {
-	args.Insert("objectID", std::to_string(m_Parent->GetObjectID()));
+	args.Insert("objectID", std::to_string(m_Parent.GetObjectID()));
 
 	auto* behaviorArray = args.InsertArray("behaviors");
 	for (auto& behavior : m_Behaviors) {
@@ -56,7 +56,7 @@ void ModelComponent::VerifyBehaviors() {
 
 void ModelComponent::SendBehaviorBlocksToClient(int32_t behaviorToSend, AMFArrayValue& args) const {
 	args.Insert("BehaviorID", std::to_string(behaviorToSend));
-	args.Insert("objectID", std::to_string(m_Parent->GetObjectID()));
+	args.Insert("objectID", std::to_string(m_Parent.GetObjectID()));
 	for (auto& behavior : m_Behaviors) if (behavior.GetBehaviorId() == behaviorToSend) behavior.SendBehaviorBlocksToClient(args);
 }
 

@@ -22,7 +22,7 @@ void GfTikiTorch::OnUse(Entity* self, Entity* killer) {
 	self->SetI64(u"userID", killer->GetObjectID());
 
 	for (int i = 0; i < m_numspawn; i++) {
-		GameMessages::SendDropClientLoot(killer, self->GetObjectID(), 935, 0, self->GetPosition());
+		GameMessages::SendDropClientLoot(*killer, self->GetObjectID(), 935, 0, self->GetPosition());
 	}
 
 	self->AddTimer("InteractionCooldown", 4);

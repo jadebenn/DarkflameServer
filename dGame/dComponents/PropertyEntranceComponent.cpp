@@ -15,7 +15,7 @@
 #include "eObjectBits.h"
 #include "eGameMasterLevel.h"
 
-PropertyEntranceComponent::PropertyEntranceComponent(Entity* parent, uint32_t componentID) : Component(parent) {
+PropertyEntranceComponent::PropertyEntranceComponent(Entity& parent, uint32_t componentID) : Component(parent) {
 	this->propertyQueries = {};
 
 	auto table = CDClientManager::Instance().GetTable<CDPropertyEntranceComponentTable>();
@@ -32,13 +32,13 @@ void PropertyEntranceComponent::OnUse(Entity* entity) {
 	auto* rocket = entity->GetComponent<CharacterComponent>()->RocketEquip(entity);
 	if (!rocket) return;
 
-	GameMessages::SendPropertyEntranceBegin(m_Parent->GetObjectID(), entity->GetSystemAddress());
+	GameMessages::SendPropertyEntranceBegin(m_Parent.GetObjectID(), entity->GetSystemAddress());
 
 	AMFArrayValue args;
 
 	args.Insert("state", "property_menu");
 
-	GameMessages::SendUIMessageServerToSingleClient(entity, entity->GetSystemAddress(), "pushGameState", args);
+	GameMessages::SendUIMessageServerToSingleClient(*entity, entity->GetSystemAddress(), "pushGameState", args);
 }
 
 void PropertyEntranceComponent::OnEnterProperty(Entity* entity, uint32_t index, bool returnToZone, const SystemAddress& sysAddr) {
@@ -63,7 +63,7 @@ void PropertyEntranceComponent::OnEnterProperty(Entity* entity, uint32_t index, 
 		cloneId = query[index].CloneId;
 	}
 
-	auto* launcher = m_Parent->GetComponent<RocketLaunchpadControlComponent>();
+	auto* launcher = m_Parent.GetComponent<RocketLaunchpadControlComponent>();
 
 	if (launcher == nullptr) {
 		return;
@@ -330,5 +330,5 @@ void PropertyEntranceComponent::OnPropertyEntranceSync(Entity* entity, bool incl
 	delete propertiesLeft;
 	propertiesLeft = nullptr;
 
-	GameMessages::SendPropertySelectQuery(m_Parent->GetObjectID(), startIndex, numberOfProperties - (startIndex + numResults) > 0, character->GetPropertyCloneID(), false, true, entries, sysAddr);
+	GameMessages::SendPropertySelectQuery(m_Parent.GetObjectID(), startIndex, numberOfProperties - (startIndex + numResults) > 0, character->GetPropertyCloneID(), false, true, entries, sysAddr);
 }

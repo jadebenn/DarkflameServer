@@ -59,7 +59,7 @@ class MovementAIComponent : public Component {
 public:
 	inline static const eReplicaComponentType ComponentType = eReplicaComponentType::MOVEMENT_AI;
 
-	MovementAIComponent(Entity* parentEntity, MovementAIInfo info);
+	MovementAIComponent(Entity& parentEntity, MovementAIInfo info);
 
 	void Update(float deltaTime) override;
 

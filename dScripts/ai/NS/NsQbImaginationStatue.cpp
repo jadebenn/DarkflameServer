@@ -35,6 +35,6 @@ void NsQbImaginationStatue::SpawnLoot(Entity* self) {
 
 	if (player == nullptr) return;
 
-	GameMessages::SendDropClientLoot(player, self->GetObjectID(), 935, 0);
-	GameMessages::SendDropClientLoot(player, self->GetObjectID(), 935, 0);
+	GameMessages::SendDropClientLoot(*player, self->GetObjectID(), 935, 0);
+	GameMessages::SendDropClientLoot(*player, self->GetObjectID(), 935, 0);
 }

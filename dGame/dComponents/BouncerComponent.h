@@ -14,12 +14,12 @@ class BouncerComponent : public Component {
 public:
 	inline static const eReplicaComponentType ComponentType = eReplicaComponentType::BOUNCER;
 
-	BouncerComponent(Entity* parentEntity);
+	BouncerComponent(Entity& parentEntity);
 	~BouncerComponent() override;
 
 	void Serialize(RakNet::BitStream* outBitStream, bool bIsInitialUpdate) override;
 
-	Entity* GetParentEntity() const;
+	Entity& GetParentEntity() const;
 
 	/**
 	 * Sets whether or not this bouncer needs to be activated by a pet

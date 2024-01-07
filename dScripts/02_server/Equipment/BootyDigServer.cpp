@@ -26,8 +26,7 @@ BootyDigServer::OnFireEventServerSide(Entity* self, Entity* sender, std::string 
 
 	auto propertyOwner = self->GetNetworkVar<std::string>(u"PropertyOwnerID");
 	auto* player = self->GetParentEntity();
-	if (player == nullptr)
-		return;
+	if (!player) return;
 
 	if (args == "ChestReady" && (propertyOwner == std::to_string(LWOOBJID_EMPTY) || player->GetVar<bool>(u"bootyDug"))) {
 		self->Smash(self->GetObjectID(), eKillType::SILENT);

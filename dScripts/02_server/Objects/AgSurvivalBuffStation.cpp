@@ -55,7 +55,7 @@ void AgSurvivalBuffStation::OnTimerDone(Entity* self, std::string timerName) {
 	for (auto memberID : team) {
 		auto member = Game::entityManager->GetEntity(memberID);
 		if (member != nullptr && !member->GetIsDead()) {
-			GameMessages::SendDropClientLoot(member, self->GetObjectID(), powerupToDrop, 0, self->GetPosition());
+			GameMessages::SendDropClientLoot(*member, self->GetObjectID(), powerupToDrop, 0, self->GetPosition());
 		} else {
 			// If player left the team or left early erase them from the team variable.
 			team.erase(std::find(team.begin(), team.end(), memberID));

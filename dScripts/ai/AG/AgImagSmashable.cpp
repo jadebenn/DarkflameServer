@@ -18,7 +18,7 @@ void AgImagSmashable::OnDie(Entity* self, Entity* killer) {
 		if (maxImagGreaterThanZero) {
 			int amount = GeneralUtils::GenerateRandomNumber<int>(0, 3);
 			for (int i = 0; i < amount; ++i) {
-				GameMessages::SendDropClientLoot(killer, self->GetObjectID(), 935, 0, self->GetPosition());
+				GameMessages::SendDropClientLoot(*killer, self->GetObjectID(), 935, 0, self->GetPosition());
 			}
 		}
 	}

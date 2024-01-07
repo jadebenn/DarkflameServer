@@ -21,7 +21,7 @@ class DestroyableComponent : public Component {
 public:
 	inline static const eReplicaComponentType ComponentType = eReplicaComponentType::DESTROYABLE;
 
-	DestroyableComponent(Entity* parentEntity);
+	DestroyableComponent(Entity& parentEntity);
 	~DestroyableComponent() override;
 
 	void Update(float deltaTime) override;

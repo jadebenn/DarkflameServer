@@ -49,7 +49,7 @@ void FvMaelstromDragon::OnDie(Entity* self, Entity* killer) {
 }
 
 void FvMaelstromDragon::OnHitOrHealResult(Entity* self, Entity* attacker, int32_t damage) {
-	GameMessages::SendPlayFXEffect(self, -1, u"gothit", "", LWOOBJID_EMPTY, 1, 1, true);
+	GameMessages::SendPlayFXEffect(*self, -1, u"gothit", "", LWOOBJID_EMPTY, 1, 1, true);
 
 	if (true) {
 		auto weakpoint = self->GetVar<int32_t>(u"weakspot");

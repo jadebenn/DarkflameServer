@@ -18,12 +18,12 @@ class SwitchComponent : public Component {
 public:
 	inline static const eReplicaComponentType ComponentType = eReplicaComponentType::SWITCH;
 
-	SwitchComponent(Entity* parent);
+	SwitchComponent(Entity& parent);
 	~SwitchComponent() override;
 
 	void Update(float deltaTime) override;
 
-	Entity* GetParentEntity() const;
+	Entity& GetParentEntity() const;
 
 	void Serialize(RakNet::BitStream* outBitStream, bool bIsInitialUpdate) override;
 

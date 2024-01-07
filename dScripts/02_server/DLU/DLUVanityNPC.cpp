@@ -25,8 +25,8 @@ void DLUVanityNPC::OnTimerDone(Entity* self, std::string timerName) {
 		self->AddTimer("teleport", 2.0f);
 		self->AddTimer("stopFX", 2.0f);
 	} else if (timerName == "stopFX") {
-		GameMessages::SendStopFXEffect(self, true, "teleportBeam");
-		GameMessages::SendStopFXEffect(self, true, "teleportRings");
+		GameMessages::SendStopFXEffect(*self, true, "teleportBeam");
+		GameMessages::SendStopFXEffect(*self, true, "teleportRings");
 	} else if (timerName == "teleport") {
 		std::vector<VanityNPCLocation>& locations = m_NPC->m_Locations[Game::server->GetZoneID()];
 

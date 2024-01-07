@@ -420,6 +420,6 @@ void ClientPackets::SendTop5HelpIssues(Packet* packet) {
 	data.Insert("Description3", Game::config->GetValue("help_3_description"));
 	data.Insert("Description4", Game::config->GetValue("help_4_description"));
 	
-	GameMessages::SendUIMessageServerToSingleClient(entity, packet->systemAddress, "UIHelpTop5", data);
+	GameMessages::SendUIMessageServerToSingleClient(*entity, packet->systemAddress, "UIHelpTop5", data);
 	
 }

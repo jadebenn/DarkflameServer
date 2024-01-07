@@ -271,7 +271,7 @@ void SlashCommandHandler::HandleChatCommand(const std::u16string& command, Entit
 
 			args.Insert("state", "Story");
 
-			GameMessages::SendUIMessageServerToSingleClient(entity, entity->GetSystemAddress(), "pushGameState", args);
+			GameMessages::SendUIMessageServerToSingleClient(*entity, entity->GetSystemAddress(), "pushGameState", args);
 		}
 
 		entity->AddCallbackTimer(0.5f, [customText, entity]() {
@@ -282,7 +282,7 @@ void SlashCommandHandler::HandleChatCommand(const std::u16string& command, Entit
 
 			LOG("Sending %s", customText.c_str());
 
-			GameMessages::SendUIMessageServerToSingleClient(entity, entity->GetSystemAddress(), "ToggleStoryBox", args);
+			GameMessages::SendUIMessageServerToSingleClient(*entity, entity->GetSystemAddress(), "ToggleStoryBox", args);
 			});
 
 		return;
@@ -519,7 +519,7 @@ void SlashCommandHandler::HandleChatCommand(const std::u16string& command, Entit
 		const auto state = !entity->GetVar<bool>(u"freecam");
 		entity->SetVar<bool>(u"freecam", state);
 
-		GameMessages::SendSetPlayerControlScheme(entity, static_cast<eControlScheme>(state ? 9 : 1));
+		GameMessages::SendSetPlayerControlScheme(*entity, static_cast<eControlScheme>(state ? 9 : 1));
 
 		ChatPackets::SendSystemMessage(sysAddr, u"Toggled freecam.");
 		return;
@@ -533,7 +533,7 @@ void SlashCommandHandler::HandleChatCommand(const std::u16string& command, Entit
 			return;
 		}
 
-		GameMessages::SendSetPlayerControlScheme(entity, static_cast<eControlScheme>(scheme));
+		GameMessages::SendSetPlayerControlScheme(*entity, static_cast<eControlScheme>(scheme));
 
 		ChatPackets::SendSystemMessage(sysAddr, u"Switched control scheme.");
 		return;
@@ -553,7 +553,7 @@ void SlashCommandHandler::HandleChatCommand(const std::u16string& command, Entit
 
 		uiState.Insert("state", args.at(0));
 
-		GameMessages::SendUIMessageServerToSingleClient(entity, sysAddr, "pushGameState", uiState);
+		GameMessages::SendUIMessageServerToSingleClient(*entity, sysAddr, "pushGameState", uiState);
 
 		ChatPackets::SendSystemMessage(sysAddr, u"Switched UI state.");
 
@@ -565,7 +565,7 @@ void SlashCommandHandler::HandleChatCommand(const std::u16string& command, Entit
 
 		amfArgs.Insert("visible", true);
 
-		GameMessages::SendUIMessageServerToSingleClient(entity, sysAddr, args[0], amfArgs);
+		GameMessages::SendUIMessageServerToSingleClient(*entity, sysAddr, args[0], amfArgs);
 
 		ChatPackets::SendSystemMessage(sysAddr, u"Toggled UI state.");
 
@@ -716,7 +716,7 @@ void SlashCommandHandler::HandleChatCommand(const std::u16string& command, Entit
 	}
 
 	if (chatCommand == "stopeffect" && entity->GetGMLevel() >= eGameMasterLevel::DEVELOPER && args.size() >= 1) {
-		GameMessages::SendStopFXEffect(entity, true, args[0]);
+		GameMessages::SendStopFXEffect(*entity, true, args[0]);
 	}
 
 	if (chatCommand == "setanntitle" && entity->GetGMLevel() >= eGameMasterLevel::DEVELOPER) {
@@ -962,7 +962,7 @@ void SlashCommandHandler::HandleChatCommand(const std::u16string& command, Entit
 			bool isFlying = character->GetIsFlying();
 
 			if (isFlying) {
-				GameMessages::SendSetJetPackMode(entity, false);
+				GameMessages::SendSetJetPackMode(*entity, false);
 
 				character->SetIsFlying(false);
 			} else {
@@ -982,7 +982,7 @@ void SlashCommandHandler::HandleChatCommand(const std::u16string& command, Entit
 				float maxAirSpeed = 30 * speedScale;
 				float verticalVelocity = 1.5 * speedScale;
 
-				GameMessages::SendSetJetPackMode(entity, true, true, false, 167, airSpeed, maxAirSpeed, verticalVelocity);
+				GameMessages::SendSetJetPackMode(*entity, true, true, false, 167, airSpeed, maxAirSpeed, verticalVelocity);
 
 				character->SetIsFlying(true);
 			}
@@ -1294,7 +1294,7 @@ void SlashCommandHandler::HandleChatCommand(const std::u16string& command, Entit
 			lootType = static_cast<eLootSourceType>(type);
 		}
 
-		GameMessages::SendModifyLEGOScore(entity, entity->GetSystemAddress(), uscore, lootType);
+		GameMessages::SendModifyLEGOScore(*entity, entity->GetSystemAddress(), uscore, lootType);
 	}
 
 	if ((chatCommand == "setlevel") && args.size() >= 1 && entity->GetGMLevel() >= eGameMasterLevel::DEVELOPER) {
@@ -1389,11 +1389,11 @@ void SlashCommandHandler::HandleChatCommand(const std::u16string& command, Entit
 	}
 
 	if (chatCommand == "playlvlfx" && entity->GetGMLevel() >= eGameMasterLevel::DEVELOPER) {
-		GameMessages::SendPlayFXEffect(entity, 7074, u"create", "7074", LWOOBJID_EMPTY, 1.0f, 1.0f, true);
+		GameMessages::SendPlayFXEffect(*entity, 7074, u"create", "7074", LWOOBJID_EMPTY, 1.0f, 1.0f, true);
 	}
 
 	if (chatCommand == "playrebuildfx" && entity->GetGMLevel() >= eGameMasterLevel::DEVELOPER) {
-		GameMessages::SendPlayFXEffect(entity, 230, u"rebuild", "230", LWOOBJID_EMPTY, 1.0f, 1.0f, true);
+		GameMessages::SendPlayFXEffect(*entity, 230, u"rebuild", "230", LWOOBJID_EMPTY, 1.0f, 1.0f, true);
 	}
 
 	if ((chatCommand == "freemoney" && entity->GetGMLevel() >= eGameMasterLevel::DEVELOPER) && args.size() == 1) {
@@ -1571,7 +1571,7 @@ void SlashCommandHandler::HandleChatCommand(const std::u16string& command, Entit
 	if ((chatCommand == "debugui") && entity->GetGMLevel() >= eGameMasterLevel::DEVELOPER) {
 		ChatPackets::SendSystemMessage(sysAddr, u"Opening UIDebugger...");
 		AMFArrayValue args;
-		GameMessages::SendUIMessageServerToSingleClient(entity, sysAddr, "ToggleUIDebugger;", args);
+		GameMessages::SendUIMessageServerToSingleClient(*entity, sysAddr, "ToggleUIDebugger;", args);
 	}
 
 	if ((chatCommand == "boost") && entity->GetGMLevel() >= eGameMasterLevel::DEVELOPER) {

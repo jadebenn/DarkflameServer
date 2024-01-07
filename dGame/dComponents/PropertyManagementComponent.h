@@ -33,7 +33,7 @@ class PropertyManagementComponent : public Component
 {
 public:
 	inline static const eReplicaComponentType ComponentType = eReplicaComponentType::PROPERTY_MANAGEMENT;
-	PropertyManagementComponent(Entity* parent);
+	PropertyManagementComponent(Entity& parent);
 	static PropertyManagementComponent* Instance();
 
 	/**

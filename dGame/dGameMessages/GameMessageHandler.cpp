@@ -691,7 +691,7 @@ void GameMessageHandler::HandleMessage(RakNet::BitStream* inStream, const System
 		GameMessages::HandleCancelDonationOnPlayer(inStream, entity);
 		break;
 	case eGameMessageType::REQUEST_VENDOR_STATUS_UPDATE:
-		GameMessages::SendVendorStatusUpdate(entity, sysAddr, true);
+		GameMessages::SendVendorStatusUpdate(*entity, sysAddr, true);
 		break;
 	default:
 		LOG_DEBUG("Received Unknown GM with ID: %4i, %s", messageID, StringifiedEnum::ToString(messageID).data());

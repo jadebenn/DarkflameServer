@@ -94,15 +94,15 @@ Item::Item(
 
 	inventory->AddManagedItem(this);
 
-	auto* entity = inventory->GetComponent()->GetParent();
-	GameMessages::SendAddItemToInventoryClientSync(entity, entity->GetSystemAddress(), this, id, showFlyingLoot, static_cast<int>(this->count), subKey, lootSourceType);
+	auto entity = inventory->GetComponent()->GetParent();
+	GameMessages::SendAddItemToInventoryClientSync(entity, entity.GetSystemAddress(), this, id, showFlyingLoot, static_cast<int>(this->count), subKey, lootSourceType);
 
 	if (isModMoveAndEquip) {
 		Equip();
 
 		LOG("Move and equipped (%i) from (%i)", this->lot, this->inventory->GetType());
 
-		Game::entityManager->SerializeEntity(inventory->GetComponent()->GetParent());
+		Game::entityManager->SerializeEntity(&inventory->GetComponent()->GetParent());
 	}
 }
 
@@ -168,12 +168,12 @@ void Item::SetCount(const uint32_t value, const bool silent, const bool disassem
 	}
 
 	if (!silent) {
-		auto* entity = inventory->GetComponent()->GetParent();
+		auto entity = inventory->GetComponent()->GetParent();
 
 		if (value > count) {
-			GameMessages::SendAddItemToInventoryClientSync(entity, entity->GetSystemAddress(), this, id, showFlyingLoot, delta, LWOOBJID_EMPTY, lootSourceType);
+			GameMessages::SendAddItemToInventoryClientSync(entity, entity.GetSystemAddress(), this, id, showFlyingLoot, delta, LWOOBJID_EMPTY, lootSourceType);
 		} else {
-			GameMessages::SendRemoveItemFromInventory(entity, entity->GetSystemAddress(), id, lot, inventory->GetType(), delta, value);
+			GameMessages::SendRemoveItemFromInventory(entity, entity.GetSystemAddress(), id, lot, inventory->GetType(), delta, value);
 		}
 	}
 
@@ -286,18 +286,14 @@ void Item::UseNonEquip(Item* item) {
 		return;
 	}
 
-	auto* playerEntity = playerInventoryComponent->GetParent();
-	if (!playerEntity) {
-		LOG_DEBUG("no player entity attached to inventory? item id is %llu", this->GetId());
-		return;
-	}
+	auto playerEntity = playerInventoryComponent->GetParent();
 
 	const auto type = static_cast<eItemType>(info->itemType);
 	if (type == eItemType::MOUNT) {
 		if (Game::zoneManager->GetMountsAllowed()) {
 			playerInventoryComponent->HandlePossession(this);
 		} else {
-			ChatPackets::SendSystemMessage(playerEntity->GetSystemAddress(), u"Mounts are not allowed in this zone");
+			ChatPackets::SendSystemMessage(playerEntity.GetSystemAddress(), u"Mounts are not allowed in this zone");
 		}
 	} else if (type == eItemType::PET_INVENTORY_ITEM && subKey != LWOOBJID_EMPTY) {
 		if (Game::zoneManager->GetPetsAllowed()) {
@@ -306,7 +302,7 @@ void Item::UseNonEquip(Item* item) {
 				playerInventoryComponent->SpawnPet(this);
 			}
 		} else {
-			ChatPackets::SendSystemMessage(playerEntity->GetSystemAddress(), u"Pets are not allowed in this zone");
+			ChatPackets::SendSystemMessage(playerEntity.GetSystemAddress(), u"Pets are not allowed in this zone");
 		}
 		// This precondition response is taken care of in SpawnPet().
 	} else {
@@ -323,12 +319,12 @@ void Item::UseNonEquip(Item* item) {
 
 			auto success = !packages.empty();
 			if (success) {
-				if (this->GetPreconditionExpression()->Check(playerInventoryComponent->GetParent())) {
-					auto* entityParent = playerInventoryComponent->GetParent();
+				if (this->GetPreconditionExpression()->Check(&playerInventoryComponent->GetParent())) {
+					auto entityParent = playerInventoryComponent->GetParent();
 					// Roll the loot for all the packages then see if it all fits.  If it fits, give it to the player, otherwise don't.
 					std::unordered_map<LOT, int32_t> rolledLoot{};
 					for (auto& pack : packages) {
-						auto thisPackage = Loot::RollLootMatrix(entityParent, pack.LootMatrixIndex);
+						auto thisPackage = Loot::RollLootMatrix(&entityParent, pack.LootMatrixIndex);
 						for (auto& loot : thisPackage) {
 							// If we already rolled this lot, add it to the existing one, otherwise create a new entry.
 							auto existingLoot = rolledLoot.find(loot.first);
@@ -340,22 +336,22 @@ void Item::UseNonEquip(Item* item) {
 						}
 					}
 					if (playerInventoryComponent->HasSpaceForLoot(rolledLoot)) {
-						Loot::GiveLoot(playerInventoryComponent->GetParent(), rolledLoot, eLootSourceType::CONSUMPTION);
+						Loot::GiveLoot(&playerInventoryComponent->GetParent(), rolledLoot, eLootSourceType::CONSUMPTION);
 						item->SetCount(item->GetCount() - 1);
 					} else {
 						success = false;
 					}
 				} else {
 					GameMessages::SendUseItemRequirementsResponse(
-						playerInventoryComponent->GetParent()->GetObjectID(),
-						playerInventoryComponent->GetParent()->GetSystemAddress(),
+						playerInventoryComponent->GetParent().GetObjectID(),
+						playerInventoryComponent->GetParent().GetSystemAddress(),
 						eUseItemResponse::FailedPrecondition
 					);
 					success = false;
 				}
 			}
 		}
-		LOG_DEBUG("Player %llu %s used item %i", playerEntity->GetObjectID(), success ? "successfully" : "unsuccessfully", thisLot);
+		LOG_DEBUG("Player %llu %s used item %i", playerEntity.GetObjectID(), success ? "successfully" : "unsuccessfully", thisLot);
 		GameMessages::SendUseItemResult(playerInventoryComponent->GetParent(), thisLot, success);
 	}
 }
@@ -370,7 +366,7 @@ void Item::Disassemble(const eInventoryType inventoryType) {
 				auto inventoryComponent = GetInventory()->GetComponent();
 				if (inventoryComponent) {
 					auto entity = inventoryComponent->GetParent();
-					if (entity) entity->SetVar<std::string>(u"currentModifiedBuild", modStr);
+					entity.SetVar<std::string>(u"currentModifiedBuild", modStr);
 				}
 			}
 

@@ -12,7 +12,7 @@ void LUPExhibitComponent::Update(float deltaTime) {
 void LUPExhibitComponent::NextLUPExhibit() {
 	m_LUPExhibitIndex++;
 	m_DirtyLUPExhibit = true;
-	Game::entityManager->SerializeEntity(m_Parent);
+	Game::entityManager->SerializeEntity(&m_Parent);
 }
 
 void LUPExhibitComponent::Serialize(RakNet::BitStream* outBitStream, bool bIsInitialUpdate) {

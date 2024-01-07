@@ -1,15 +1,13 @@
 #include "Component.h"
 
 
-Component::Component(Entity* parent) {
-	m_Parent = parent;
-}
+Component::Component(Entity& parent) : m_Parent{ parent } {}
 
 Component::~Component() {
 
 }
 
-Entity* Component::GetParent() const {
+Entity& Component::GetParent() const {
 	return m_Parent;
 }
 

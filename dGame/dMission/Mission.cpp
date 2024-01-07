@@ -205,7 +205,7 @@ bool Mission::IsValidMission(const uint32_t missionId, CDMissions& info) {
 }
 
 Entity* Mission::GetAssociate() const {
-	return m_MissionComponent->GetParent();
+	return &m_MissionComponent->GetParent();
 }
 
 User* Mission::GetUser() const {
@@ -449,7 +449,7 @@ void Mission::YieldRewards() {
 			coinsToSend += info.LegoScore * Game::zoneManager->GetWorldConfig()->levelCapCurrencyConversion;
 		} else {
 			characterComponent->SetUScore(characterComponent->GetUScore() + info.LegoScore);
-			GameMessages::SendModifyLEGOScore(entity, entity->GetSystemAddress(), info.LegoScore, lootSource);
+			GameMessages::SendModifyLEGOScore(*entity, entity->GetSystemAddress(), info.LegoScore, lootSource);
 		}
 	}
 

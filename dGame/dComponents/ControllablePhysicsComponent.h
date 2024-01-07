@@ -23,7 +23,7 @@ class ControllablePhysicsComponent : public PhysicsComponent {
 public:
 	inline static const eReplicaComponentType ComponentType = eReplicaComponentType::CONTROLLABLE_PHYSICS;
 
-	ControllablePhysicsComponent(Entity* entity);
+	ControllablePhysicsComponent(Entity& entity);
 	~ControllablePhysicsComponent() override;
 
 	void Update(float deltaTime) override;

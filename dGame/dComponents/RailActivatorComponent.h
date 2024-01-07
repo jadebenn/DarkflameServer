@@ -12,7 +12,7 @@
  */
 class RailActivatorComponent final : public Component {
 public:
-	explicit RailActivatorComponent(Entity* parent, int32_t componentID);
+	explicit RailActivatorComponent(Entity& parent, int32_t componentID);
 	~RailActivatorComponent() override;
 
 	inline static const eReplicaComponentType ComponentType = eReplicaComponentType::RAIL_ACTIVATOR;

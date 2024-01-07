@@ -1,18 +1,18 @@
 #include "DonationVendorComponent.h"
 #include "Database.h"
 
-DonationVendorComponent::DonationVendorComponent(Entity* parent) : VendorComponent(parent) {
+DonationVendorComponent::DonationVendorComponent(Entity& parent) : VendorComponent(parent) {
 	//LoadConfigData
 	m_PercentComplete = 0.0;
 	m_TotalDonated = 0;
 	m_TotalRemaining = 0;
 
 	// custom attribute to calculate other values
-	m_Goal = m_Parent->GetVar<int32_t>(u"donationGoal");
+	m_Goal = m_Parent.GetVar<int32_t>(u"donationGoal");
 	if (m_Goal == 0) m_Goal = INT32_MAX;
 
 	// Default to the nexus tower jawbox activity and setup settings
-	m_ActivityId = m_Parent->GetVar<uint32_t>(u"activityID");
+	m_ActivityId = m_Parent.GetVar<uint32_t>(u"activityID");
 	if ((m_ActivityId == 0) || (m_ActivityId == 117)) {
 		m_ActivityId = 117;
 		m_PercentComplete = 1.0;

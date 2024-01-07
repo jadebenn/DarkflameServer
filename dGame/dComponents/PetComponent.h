@@ -23,7 +23,7 @@ class PetComponent : public Component
 public:
 	inline static const eReplicaComponentType ComponentType = eReplicaComponentType::PET;
 
-	explicit PetComponent(Entity* parentEntity, uint32_t componentId);
+	explicit PetComponent(Entity& parentEntity, uint32_t componentId);
 	~PetComponent() override;
 
 	void Serialize(RakNet::BitStream* outBitStream, bool bIsInitialUpdate) override;
@@ -176,7 +176,7 @@ public:
 	 * Returns the entity that this component belongs to
 	 * @return the entity that this component belongs to
 	 */
-	Entity* GetParentEntity() const;
+	Entity& GetParentEntity() const;
 
 	/**
 	 * Sets the name of the pet to be moderated

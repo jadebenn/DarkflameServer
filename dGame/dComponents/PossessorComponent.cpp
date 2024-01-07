@@ -7,7 +7,7 @@
 #include "eControlScheme.h"
 #include "eStateChangeType.h"
 
-PossessorComponent::PossessorComponent(Entity* parent) : Component(parent) {
+PossessorComponent::PossessorComponent(Entity& parent) : Component(parent) {
 	m_Possessable = LWOOBJID_EMPTY;
 }
 
@@ -18,7 +18,7 @@ PossessorComponent::~PossessorComponent() {
 			auto* possessable = mount->GetComponent<PossessableComponent>();
 			if (possessable) {
 				if (possessable->GetIsItemSpawned()) {
-					GameMessages::SendMarkInventoryItemAsActive(m_Parent->GetObjectID(), false, eUnequippableActiveType::MOUNT, GetMountItemID(), m_Parent->GetSystemAddress());
+					GameMessages::SendMarkInventoryItemAsActive(m_Parent.GetObjectID(), false, eUnequippableActiveType::MOUNT, GetMountItemID(), m_Parent.GetSystemAddress());
 				}
 				possessable->Dismount();
 			}
@@ -45,18 +45,18 @@ void PossessorComponent::Mount(Entity* mount) {
 	GameMessages::SendSetMountInventoryID(m_Parent, mount->GetObjectID(), UNASSIGNED_SYSTEM_ADDRESS);
 	auto* possessableComponent = mount->GetComponent<PossessableComponent>();
 	if (possessableComponent) {
-		possessableComponent->SetPossessor(m_Parent->GetObjectID());
+		possessableComponent->SetPossessor(m_Parent.GetObjectID());
 		SetPossessable(mount->GetObjectID());
 		SetPossessableType(possessableComponent->GetPossessionType());
 	}
 
-	auto characterComponent = m_Parent->GetComponent<CharacterComponent>();
+	auto characterComponent = m_Parent.GetComponent<CharacterComponent>();
 	if (characterComponent) characterComponent->SetIsRacing(true);
 
 	// GM's to send
 	GameMessages::SendSetJetPackMode(m_Parent, false);
-	GameMessages::SendVehicleUnlockInput(mount->GetObjectID(), false, m_Parent->GetSystemAddress());
-	GameMessages::SendSetStunned(m_Parent->GetObjectID(), eStateChangeType::PUSH, m_Parent->GetSystemAddress(), LWOOBJID_EMPTY, true, false, true, false, false, false, false, true, true, true, true, true, true, true, true, true);
+	GameMessages::SendVehicleUnlockInput(mount->GetObjectID(), false, m_Parent.GetSystemAddress());
+	GameMessages::SendSetStunned(m_Parent.GetObjectID(), eStateChangeType::PUSH, m_Parent.GetSystemAddress(), LWOOBJID_EMPTY, true, false, true, false, false, false, false, true, true, true, true, true, true, true, true, true);
 
 	Game::entityManager->SerializeEntity(m_Parent);
 	Game::entityManager->SerializeEntity(mount);
@@ -76,7 +76,7 @@ void PossessorComponent::Dismount(Entity* mount, bool forceDismount) {
 		Game::entityManager->SerializeEntity(m_Parent);
 		Game::entityManager->SerializeEntity(mount);
 
-		auto characterComponent = m_Parent->GetComponent<CharacterComponent>();
+		auto characterComponent = m_Parent.GetComponent<CharacterComponent>();
 		if (characterComponent) characterComponent->SetIsRacing(false);
 	}
 	// Make sure we don't have wacky controls

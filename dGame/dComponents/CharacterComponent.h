@@ -65,7 +65,7 @@ class CharacterComponent : public Component {
 public:
 	inline static const eReplicaComponentType ComponentType = eReplicaComponentType::CHARACTER;
 
-	CharacterComponent(Entity* parent, Character* character);
+	CharacterComponent(Entity& parent, Character* character);
 	~CharacterComponent() override;
 
 	void LoadFromXml(tinyxml2::XMLDocument* doc) override;

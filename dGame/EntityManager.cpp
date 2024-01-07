@@ -438,6 +438,10 @@ void EntityManager::SerializeEntity(Entity* entity) {
 	//PacketUtils::SavePacket(std::to_string(m_SerializationCounter) + "_[27]_"+std::to_string(entity->GetObjectID()) + ".bin", (char*)stream.GetData(), stream.GetNumberOfBytesUsed());
 }
 
+void EntityManager::SerializeEntity(Entity& entity) {
+	EntityManager::SerializeEntity(&entity);
+}
+
 void EntityManager::DestructAllEntities(const SystemAddress& sysAddr) {
 	for (const auto& e : m_Entities) {
 		DestructEntity(e.second, sysAddr);

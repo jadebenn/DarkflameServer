@@ -26,7 +26,7 @@ class ModelComponent : public Component {
 public:
 	inline static const eReplicaComponentType ComponentType = eReplicaComponentType::MODEL;
 
-	ModelComponent(Entity* parent);
+	ModelComponent(Entity& parent);
 
 	void Serialize(RakNet::BitStream* outBitStream, bool bIsInitialUpdate) override;
 

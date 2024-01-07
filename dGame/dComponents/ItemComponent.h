@@ -8,7 +8,7 @@ class ItemComponent : public Component {
 public:
 	inline static const eReplicaComponentType ComponentType = eReplicaComponentType::ITEM;
 
-	ItemComponent(Entity* entity) : Component(entity) {}
+	ItemComponent(Entity& entity) : Component(entity) {}
 
 	void Serialize(RakNet::BitStream* bitStream, bool isConstruction) override;
 };

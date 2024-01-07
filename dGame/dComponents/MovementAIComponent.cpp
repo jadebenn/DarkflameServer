@@ -23,22 +23,22 @@ namespace {
 	std::map<LOT, float> m_PhysicsSpeedCache;
 }
 
-MovementAIComponent::MovementAIComponent(Entity* parent, MovementAIInfo info) : Component(parent) {
+MovementAIComponent::MovementAIComponent(Entity& parent, MovementAIInfo info) : Component(parent) {
 	m_Info = info;
 	m_AtFinalWaypoint = true;
 
 	m_BaseCombatAI = nullptr;
 
-	m_BaseCombatAI = m_Parent->GetComponent<BaseCombatAIComponent>();
+	m_BaseCombatAI = m_Parent.GetComponent<BaseCombatAIComponent>();
 
 	//Try and fix the insane values:
 	if (m_Info.wanderRadius > 5.0f) m_Info.wanderRadius *= 0.5f;
 	if (m_Info.wanderRadius > 8.0f) m_Info.wanderRadius = 8.0f;
 	if (m_Info.wanderSpeed > 0.5f) m_Info.wanderSpeed *= 0.5f;
 
-	m_BaseSpeed = GetBaseSpeed(m_Parent->GetLOT());
+	m_BaseSpeed = GetBaseSpeed(m_Parent.GetLOT());
 
-	m_NextWaypoint = m_Parent->GetPosition();
+	m_NextWaypoint = m_Parent.GetPosition();
 	m_Acceleration = 0.4f;
 	m_PullingToPoint = false;
 	m_PullPoint = NiPoint3::ZERO;
@@ -60,7 +60,7 @@ void MovementAIComponent::Update(const float deltaTime) {
 
 		SetPosition(source + velocity);
 
-		if (Vector3::DistanceSquared(m_Parent->GetPosition(), m_PullPoint) < std::pow(2, 2)) {
+		if (Vector3::DistanceSquared(m_Parent.GetPosition(), m_PullPoint) < std::pow(2, 2)) {
 			m_PullingToPoint = false;
 		}
 
@@ -137,7 +137,7 @@ nextAction:
 
 	SetVelocity(velocity);
 
-	Game::entityManager->SerializeEntity(m_Parent);
+	Game::entityManager->SerializeEntity(&m_Parent);
 }
 
 const MovementAIInfo& MovementAIComponent::GetInfo() const {
@@ -155,11 +155,11 @@ bool MovementAIComponent::AdvanceWaypointIndex() {
 }
 
 NiPoint3 MovementAIComponent::GetCurrentWaypoint() const {
-	return m_PathIndex >= m_InterpolatedWaypoints.size() ? m_Parent->GetPosition() : m_InterpolatedWaypoints[m_PathIndex];
+	return m_PathIndex >= m_InterpolatedWaypoints.size() ? m_Parent.GetPosition() : m_InterpolatedWaypoints[m_PathIndex];
 }
 
 NiPoint3 MovementAIComponent::ApproximateLocation() const {
-	auto source = m_Parent->GetPosition();
+	auto source = m_Parent.GetPosition();
 
 	if (AtFinalWaypoint()) return source;
 
@@ -191,7 +191,7 @@ bool MovementAIComponent::Warp(const NiPoint3& point) {
 
 	SetPosition(destination);
 
-	Game::entityManager->SerializeEntity(m_Parent);
+	Game::entityManager->SerializeEntity(&m_Parent);
 
 	return true;
 }
@@ -215,7 +215,7 @@ void MovementAIComponent::Stop() {
 
 	m_CurrentSpeed = 0;
 
-	Game::entityManager->SerializeEntity(m_Parent);
+	Game::entityManager->SerializeEntity(&m_Parent);
 }
 
 void MovementAIComponent::PullToPoint(const NiPoint3& point) {
@@ -269,15 +269,15 @@ float MovementAIComponent::GetBaseSpeed(LOT lot) {
 }
 
 void MovementAIComponent::SetPosition(const NiPoint3& value) {
-	m_Parent->SetPosition(value);
+	m_Parent.SetPosition(value);
 }
 
 void MovementAIComponent::SetRotation(const NiQuaternion& value) {
-	if (!m_LockRotation) m_Parent->SetRotation(value);
+	if (!m_LockRotation) m_Parent.SetRotation(value);
 }
 
 void MovementAIComponent::SetVelocity(const NiPoint3& value) {
-	auto* controllablePhysicsComponent = m_Parent->GetComponent<ControllablePhysicsComponent>();
+	auto* controllablePhysicsComponent = m_Parent.GetComponent<ControllablePhysicsComponent>();
 
 	if (controllablePhysicsComponent != nullptr) {
 		controllablePhysicsComponent->SetVelocity(value);
@@ -285,7 +285,7 @@ void MovementAIComponent::SetVelocity(const NiPoint3& value) {
 		return;
 	}
 
-	auto* simplePhysicsComponent = m_Parent->GetComponent<SimplePhysicsComponent>();
+	auto* simplePhysicsComponent = m_Parent.GetComponent<SimplePhysicsComponent>();
 
 	if (simplePhysicsComponent != nullptr) {
 		simplePhysicsComponent->SetVelocity(value);
@@ -303,7 +303,7 @@ void MovementAIComponent::SetDestination(const NiPoint3& destination) {
 
 	std::vector<NiPoint3> computedPath;
 	if (dpWorld::Instance().IsLoaded()) {
-		computedPath = dpWorld::Instance().GetNavMesh()->GetPath(m_Parent->GetPosition(), destination, m_Info.wanderSpeed);
+		computedPath = dpWorld::Instance().GetNavMesh()->GetPath(m_Parent.GetPosition(), destination, m_Info.wanderSpeed);
 	}
 
 	// Somehow failed
@@ -344,7 +344,7 @@ void MovementAIComponent::SetDestination(const NiPoint3& destination) {
 }
 
 NiPoint3 MovementAIComponent::GetDestination() const {
-	return m_InterpolatedWaypoints.empty() ? m_Parent->GetPosition() : m_InterpolatedWaypoints.back();
+	return m_InterpolatedWaypoints.empty() ? m_Parent.GetPosition() : m_InterpolatedWaypoints.back();
 }
 
 void MovementAIComponent::SetMaxSpeed(const float value) {

@@ -276,13 +276,13 @@ void Loot::DropLoot(Entity* player, Entity* killedObject, std::unordered_map<LOT
 
 	for (const auto& pair : result) {
 		for (int i = 0; i < pair.second; ++i) {
-			GameMessages::SendDropClientLoot(player, source, pair.first, 0, spawnPosition, 1);
+			GameMessages::SendDropClientLoot(*player, source, pair.first, 0, spawnPosition, 1);
 		}
 	}
 
 	uint32_t coins = static_cast<uint32_t>(minCoins + GeneralUtils::GenerateRandomNumber<float>(0, 1) * (maxCoins - minCoins));
 
-	GameMessages::SendDropClientLoot(player, source, LOT_NULL, coins, spawnPosition);
+	GameMessages::SendDropClientLoot(*player, source, LOT_NULL, coins, spawnPosition);
 }
 
 void Loot::DropActivityLoot(Entity* player, Entity* source, uint32_t activityID, int32_t rating) {

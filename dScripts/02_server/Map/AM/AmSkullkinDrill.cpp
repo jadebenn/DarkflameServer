@@ -173,7 +173,7 @@ void AmSkullkinDrill::OnArrived(Entity* self, uint32_t waypointIndex) {
 
 	if (waypointIndex == 1) {
 		RenderComponent::PlayAnimation(self, u"no-spin");
-		GameMessages::SendStopFXEffect(self, true, "active");
+		GameMessages::SendStopFXEffect(*self, true, "active");
 		GameMessages::SendPlayFXEffect(self->GetObjectID(), -1, u"indicator", "indicator");
 
 		self->SetVar(u"bActive", false);
@@ -194,7 +194,7 @@ void AmSkullkinDrill::OnArrived(Entity* self, uint32_t waypointIndex) {
 	} else {
 		RenderComponent::PlayAnimation(self, u"idle");
 		GameMessages::SendPlayFXEffect(self->GetObjectID(), -1, u"spin", "active");
-		GameMessages::SendStopFXEffect(self, true, "indicator");
+		GameMessages::SendStopFXEffect(*self, true, "indicator");
 	}
 }
 

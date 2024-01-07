@@ -6,7 +6,7 @@
 #include "Entity.h"
 #include "ScriptComponent.h"
 
-ScriptComponent::ScriptComponent(Entity* parent, std::string scriptName, bool serialized, bool client) : Component(parent) {
+ScriptComponent::ScriptComponent(Entity& parent, std::string scriptName, bool serialized, bool client) : Component(parent) {
 	m_Serialized = serialized;
 	m_Client = client;
 
@@ -19,7 +19,7 @@ ScriptComponent::~ScriptComponent() {
 
 void ScriptComponent::Serialize(RakNet::BitStream* outBitStream, bool bIsInitialUpdate) {
 	if (bIsInitialUpdate) {
-		const auto& networkSettings = m_Parent->GetNetworkSettings();
+		const auto& networkSettings = m_Parent.GetNetworkSettings();
 		auto hasNetworkSettings = !networkSettings.empty();
 		outBitStream->Write(hasNetworkSettings);
 
@@ -52,5 +52,5 @@ void ScriptComponent::SetScript(const std::string& scriptName) {
 		return;
 	}*/
 
-	m_Script = CppScripts::GetScript(m_Parent, scriptName);
+	m_Script = CppScripts::GetScript(&m_Parent, scriptName);
 }

@@ -29,9 +29,9 @@
 #include "CDActivitiesTable.h"
 #include "LeaderboardManager.h"
 
-ActivityComponent::ActivityComponent(Entity* parent, int32_t activityID) : Component(parent) {
+ActivityComponent::ActivityComponent(Entity& parent, int32_t activityID) : Component(parent) {
 	if (activityID > 0) m_ActivityID = activityID;
-	else m_ActivityID = parent->GetVar<int32_t>(u"activityID");
+	else m_ActivityID = parent.GetVar<int32_t>(u"activityID");
 	CDActivitiesTable* activitiesTable = CDClientManager::Instance().GetTable<CDActivitiesTable>();
 	std::vector<CDActivities> activities = activitiesTable->Query([this](CDActivities entry) {return (entry.ActivityID == m_ActivityID); });
 
@@ -42,14 +42,14 @@ ActivityComponent::ActivityComponent(Entity* parent, int32_t activityID) : Compo
 			m_ActivityInfo.minTeams = 1;
 		}
 		if (m_ActivityInfo.instanceMapID == -1) {
-			const auto& transferOverride = parent->GetVarAsString(u"transferZoneID");
+			const auto& transferOverride = parent.GetVarAsString(u"transferZoneID");
 			if (!transferOverride.empty()) {
 				GeneralUtils::TryParse(transferOverride, m_ActivityInfo.instanceMapID);
 			}
 		}
 	}
 
-	auto* destroyableComponent = m_Parent->GetComponent<DestroyableComponent>();
+	auto* destroyableComponent = m_Parent.GetComponent<DestroyableComponent>();
 
 	if (destroyableComponent) {
 		// check for LMIs and set the loot LMIs
@@ -126,7 +126,7 @@ void ActivityComponent::PlayerJoin(Entity* player) {
 }
 
 void ActivityComponent::PlayerJoinLobby(Entity* player) {
-	if (!m_Parent->HasComponent(eReplicaComponentType::QUICK_BUILD))
+	if (!m_Parent.HasComponent(eReplicaComponentType::QUICK_BUILD))
 		GameMessages::SendMatchResponse(player, player->GetSystemAddress(), 0); // tell the client they joined a lobby
 	LobbyPlayer* newLobbyPlayer = new LobbyPlayer();
 	newLobbyPlayer->entityID = player->GetObjectID();
@@ -414,7 +414,7 @@ void ActivityComponent::RemoveActivityPlayerData(LWOOBJID playerID) {
 
 			m_ActivityPlayers.erase(m_ActivityPlayers.begin() + i);
 			m_DirtyActivityInfo = true;
-			Game::entityManager->SerializeEntity(m_Parent);
+			Game::entityManager->SerializeEntity(&m_Parent);
 
 			return;
 		}
@@ -428,7 +428,7 @@ ActivityPlayer* ActivityComponent::AddActivityPlayerData(LWOOBJID playerID) {
 
 	m_ActivityPlayers.push_back(new ActivityPlayer{ playerID, {} });
 	m_DirtyActivityInfo = true;
-	Game::entityManager->SerializeEntity(m_Parent);
+	Game::entityManager->SerializeEntity(&m_Parent);
 
 	return GetActivityPlayerData(playerID);
 }
@@ -450,7 +450,7 @@ void ActivityComponent::SetActivityValue(LWOOBJID playerID, uint32_t index, floa
 		data->values[std::min(index, static_cast<uint32_t>(9))] = value;
 	}
 	m_DirtyActivityInfo = true;
-	Game::entityManager->SerializeEntity(m_Parent);
+	Game::entityManager->SerializeEntity(&m_Parent);
 }
 
 void ActivityComponent::PlayerRemove(LWOOBJID playerID) {
@@ -546,7 +546,7 @@ void ActivityInstance::RewardParticipant(Entity* participant) {
 			maxCoins = currencyTable[0].maxvalue;
 		}
 
-		Loot::DropLoot(participant, m_Parent, activityRewards[0].LootMatrixIndex, minCoins, maxCoins);
+		Loot::DropLoot(participant, &m_Parent, activityRewards[0].LootMatrixIndex, minCoins, maxCoins);
 	}
 }
 

@@ -25,7 +25,7 @@
 std::unordered_map<AchievementCacheKey, std::vector<uint32_t>> MissionComponent::m_AchievementCache = {};
 
 //! Initializer
-MissionComponent::MissionComponent(Entity* parent) : Component(parent) {
+MissionComponent::MissionComponent(Entity& parent) : Component(parent) {
 	m_LastUsedMissionOrderUID = Game::zoneManager->GetUniqueMissionIdStartingValue();
 }
 
@@ -103,9 +103,9 @@ void MissionComponent::AcceptMission(const uint32_t missionId, const bool skipCh
 	if (missionId == 1728) {
 		//Needs to send a mail
 
-		auto address = m_Parent->GetSystemAddress();
+		auto address = m_Parent.GetSystemAddress();
 
-		Mail::HandleNotificationRequest(address, m_Parent->GetObjectID());
+		Mail::HandleNotificationRequest(address, m_Parent.GetObjectID());
 	}
 }
 
@@ -628,5 +628,5 @@ void MissionComponent::ResetMission(const int32_t missionId) {
 	if (!mission) return;
 
 	m_Missions.erase(missionId);
-	GameMessages::SendResetMissions(m_Parent, m_Parent->GetSystemAddress(), missionId);
+	GameMessages::SendResetMissions(m_Parent, m_Parent.GetSystemAddress(), missionId);
 }

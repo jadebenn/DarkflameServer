@@ -5,12 +5,12 @@
 
 std::vector<SwitchComponent*> SwitchComponent::petSwitches;
 
-SwitchComponent::SwitchComponent(Entity* parent) : Component(parent) {
+SwitchComponent::SwitchComponent(Entity& parent) : Component(parent) {
 	m_Active = false;
 
-	m_ResetTime = m_Parent->GetVarAs<int32_t>(u"switch_reset_time");
+	m_ResetTime = m_Parent.GetVarAs<int32_t>(u"switch_reset_time");
 
-	m_QuickBuild = m_Parent->GetComponent<QuickBuildComponent>();
+	m_QuickBuild = m_Parent.GetComponent<QuickBuildComponent>();
 }
 
 SwitchComponent::~SwitchComponent() {
@@ -43,10 +43,9 @@ void SwitchComponent::EntityEnter(Entity* entity) {
 			if (m_QuickBuild->GetState() != eQuickBuildState::COMPLETED) return;
 		}
 		m_Active = true;
-		if (!m_Parent) return;
-		m_Parent->TriggerEvent(eTriggerEventType::ACTIVATED, entity);
+		m_Parent.TriggerEvent(eTriggerEventType::ACTIVATED, entity);
 
-		const auto grpName = m_Parent->GetVarAsString(u"grp_name");
+		const auto grpName = m_Parent.GetVarAsString(u"grp_name");
 
 		if (!grpName.empty()) {
 			const auto entities = Game::entityManager->GetEntitiesInGroup(grpName);
@@ -59,11 +58,11 @@ void SwitchComponent::EntityEnter(Entity* entity) {
 		m_Timer = m_ResetTime;
 
 		if (m_PetBouncer != nullptr) {
-			GameMessages::SendPlayFXEffect(m_Parent->GetObjectID(), 2602, u"pettriggeractive", "BounceEffect", LWOOBJID_EMPTY, 1, 1, true);
-			RenderComponent::PlayAnimation(m_Parent, u"engaged");
+			GameMessages::SendPlayFXEffect(m_Parent.GetObjectID(), 2602, u"pettriggeractive", "BounceEffect", LWOOBJID_EMPTY, 1, 1, true);
+			RenderComponent::PlayAnimation(&m_Parent, u"engaged");
 			m_PetBouncer->SetPetBouncerEnabled(true);
 		} else {
-			Game::entityManager->SerializeEntity(m_Parent);
+			Game::entityManager->SerializeEntity(&m_Parent);
 		}
 
 	}
@@ -79,10 +78,9 @@ void SwitchComponent::Update(float deltaTime) {
 
 		if (m_Timer <= 0.0f) {
 			m_Active = false;
-			if (!m_Parent) return;
-			m_Parent->TriggerEvent(eTriggerEventType::DEACTIVATED, m_Parent);
+			m_Parent.TriggerEvent(eTriggerEventType::DEACTIVATED, &m_Parent);
 
-			const auto grpName = m_Parent->GetVarAsString(u"grp_name");
+			const auto grpName = m_Parent.GetVarAsString(u"grp_name");
 
 			if (!grpName.empty()) {
 				const auto entities = Game::entityManager->GetEntitiesInGroup(grpName);
@@ -95,13 +93,13 @@ void SwitchComponent::Update(float deltaTime) {
 			if (m_PetBouncer != nullptr) {
 				m_PetBouncer->SetPetBouncerEnabled(false);
 			} else {
-				Game::entityManager->SerializeEntity(m_Parent);
+				Game::entityManager->SerializeEntity(&m_Parent);
 			}
 		}
 	}
 }
 
-Entity* SwitchComponent::GetParentEntity() const {
+Entity& SwitchComponent::GetParentEntity() const {
 	return m_Parent;
 }
 
@@ -110,7 +108,7 @@ SwitchComponent* SwitchComponent::GetClosestSwitch(NiPoint3 position) {
 	SwitchComponent* closest = nullptr;
 
 	for (SwitchComponent* petSwitch : petSwitches) {
-		float distance = Vector3::DistanceSquared(petSwitch->m_Parent->GetPosition(), position);
+		float distance = Vector3::DistanceSquared(petSwitch->m_Parent.GetPosition(), position);
 
 		if (closest == nullptr || distance < closestDistance) {
 			closestDistance = distance;

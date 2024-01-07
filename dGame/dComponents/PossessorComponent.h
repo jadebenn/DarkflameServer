@@ -20,7 +20,7 @@ class PossessorComponent : public Component {
 public:
 	inline static const eReplicaComponentType ComponentType = eReplicaComponentType::POSSESSOR;
 
-	PossessorComponent(Entity* parent);
+	PossessorComponent(Entity& parent);
 	~PossessorComponent() override;
 
 	void Serialize(RakNet::BitStream* outBitStream, bool bIsInitialUpdate) override;

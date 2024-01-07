@@ -41,9 +41,9 @@ void ControlBehaviors::RequestUpdatedID(ControlBehaviorContext& context) {
 			AMFArrayValue args;
 
 			args.Insert("behaviorID", std::to_string(persistentId));
-			args.Insert("objectID", std::to_string(context.modelComponent->GetParent()->GetObjectID()));
+			args.Insert("objectID", std::to_string(context.modelComponent->GetParent().GetObjectID()));
 
-			GameMessages::SendUIMessageServerToSingleClient(context.modelOwner, context.modelOwner->GetSystemAddress(), "UpdateBehaviorID", args);
+			GameMessages::SendUIMessageServerToSingleClient(*context.modelOwner, context.modelOwner->GetSystemAddress(), "UpdateBehaviorID", args);
 			context.modelComponent->UpdatePendingBehaviorId(persistentId);
 
 			ControlBehaviors::Instance().SendBehaviorListToClient(context);
@@ -56,7 +56,7 @@ void ControlBehaviors::SendBehaviorListToClient(const ControlBehaviorContext& co
 	AMFArrayValue behaviorsToSerialize;
 	context.modelComponent->SendBehaviorListToClient(behaviorsToSerialize);
 
-	GameMessages::SendUIMessageServerToSingleClient(context.modelOwner, context.modelOwner->GetSystemAddress(), "UpdateBehaviorList", behaviorsToSerialize);
+	GameMessages::SendUIMessageServerToSingleClient(*context.modelOwner, context.modelOwner->GetSystemAddress(), "UpdateBehaviorList", behaviorsToSerialize);
 }
 
 // TODO This is also supposed to serialize the state of the behaviors in progress but those aren't implemented yet
@@ -67,7 +67,7 @@ void ControlBehaviors::SendBehaviorBlocksToClient(ControlBehaviorContext& contex
 	context.modelComponent->VerifyBehaviors();
 	AMFArrayValue behavior;
 	context.modelComponent->SendBehaviorBlocksToClient(behaviorMsg.GetBehaviorId(), behavior);
-	GameMessages::SendUIMessageServerToSingleClient(context.modelOwner, context.modelOwner->GetSystemAddress(), "UpdateBehaviorBlocks", behavior);
+	GameMessages::SendUIMessageServerToSingleClient(*context.modelOwner, context.modelOwner->GetSystemAddress(), "UpdateBehaviorBlocks", behavior);
 }
 
 void ControlBehaviors::UpdateAction(AMFArrayValue* arguments) {
@@ -148,7 +148,7 @@ void ControlBehaviors::ProcessCommand(Entity* modelEntity, const SystemAddress& 
 
 		AMFArrayValue args;
 		args.Insert("BehaviorID", std::to_string(msg.GetBehaviorId()));
-		GameMessages::SendUIMessageServerToSingleClient(modelOwner, modelOwner->GetParentUser()->GetSystemAddress(), "BehaviorRemoved", args);
+		GameMessages::SendUIMessageServerToSingleClient(*modelOwner, modelOwner->GetParentUser()->GetSystemAddress(), "BehaviorRemoved", args);
 
 		SendBehaviorListToClient(context);
 	} else if (command == "updateAction") {

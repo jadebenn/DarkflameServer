@@ -9,12 +9,12 @@
 
 #include "CDActivitiesTable.h"
 
- /**
-  * Represents an instance of an activity, having participants and score
-  */
+/**
+ * Represents an instance of an activity, having participants and score
+ */
 class ActivityInstance {
 public:
-	ActivityInstance(Entity* parent, CDActivities activityInfo) { m_Parent = parent; m_ActivityInfo = activityInfo; };
+	ActivityInstance(Entity& parent, CDActivities activityInfo) : m_Parent{ parent } { m_ActivityInfo = activityInfo; };
 	//~ActivityInstance();
 
 	/**
@@ -80,7 +80,7 @@ private:
 	/**
 	 * The entity that owns this activity (the entity that has the ScriptedActivityComponent)
 	 */
-	Entity* m_Parent;
+	Entity& m_Parent;
 
 	/**
 	 * All the participants of this activity
@@ -150,7 +150,7 @@ struct ActivityPlayer {
  */
 class ActivityComponent : public Component {
 public:
-	ActivityComponent(Entity* parent, int32_t activityID);
+	ActivityComponent(Entity& parent, int32_t activityID);
 
 	void Update(float deltaTime) override;
 	void Serialize(RakNet::BitStream* outBitStream, bool bIsInitialUpdate) override;

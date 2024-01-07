@@ -26,7 +26,7 @@ namespace {
 	};
 }
 
-BuffComponent::BuffComponent(Entity* parent) : Component(parent) {
+BuffComponent::BuffComponent(Entity& parent) : Component(parent) {
 }
 
 BuffComponent::~BuffComponent() {
@@ -54,7 +54,7 @@ void BuffComponent::Serialize(RakNet::BitStream* outBitStream, bool bIsInitialUp
 			auto* team = TeamManager::Instance()->GetTeam(buff.source);
 			bool addedByTeammate = false;
 			if (team) {
-				addedByTeammate = std::count(team->members.begin(), team->members.end(), m_Parent->GetObjectID()) > 0;
+				addedByTeammate = std::count(team->members.begin(), team->members.end(), m_Parent.GetObjectID()) > 0;
 			}
 
 			outBitStream->Write(addedByTeammate); // Added by teammate. If source is in the same team as the target, this is true. Otherwise, false.
@@ -82,7 +82,7 @@ void BuffComponent::Update(float deltaTime) {
 				buff.second.tickTime = buff.second.tick;
 				buff.second.stacks--;
 
-				SkillComponent::HandleUnmanaged(buff.second.behaviorID, m_Parent->GetObjectID(), buff.second.source);
+				SkillComponent::HandleUnmanaged(buff.second.behaviorID, m_Parent.GetObjectID(), buff.second.source);
 			}
 		}
 
@@ -123,7 +123,7 @@ void BuffComponent::ApplyBuffFx(uint32_t buffId, const BuffParameter& buff) {
 
 	fxToPlay += std::to_string(buffId);
 	LOG_DEBUG("Playing %s %i", fxToPlay.c_str(), buff.effectId);
-	GameMessages::SendPlayFXEffect(m_Parent->GetObjectID(), buff.effectId, u"cast", fxToPlay, LWOOBJID_EMPTY, 1.07f, 1.0f, false);
+	GameMessages::SendPlayFXEffect(m_Parent.GetObjectID(), buff.effectId, u"cast", fxToPlay, LWOOBJID_EMPTY, 1.07f, 1.0f, false);
 }
 
 void BuffComponent::RemoveBuffFx(uint32_t buffId, const BuffParameter& buff) {
@@ -150,10 +150,10 @@ void BuffComponent::ApplyBuff(const int32_t id, const float duration, const LWOO
 	auto* team = TeamManager::Instance()->GetTeam(source);
 	bool addedByTeammate = false;
 	if (team) {
-		addedByTeammate = std::count(team->members.begin(), team->members.end(), m_Parent->GetObjectID()) > 0;
+		addedByTeammate = std::count(team->members.begin(), team->members.end(), m_Parent.GetObjectID()) > 0;
 	}
 
-	GameMessages::SendAddBuff(const_cast<LWOOBJID&>(m_Parent->GetObjectID()), source, static_cast<uint32_t>(id),
+	GameMessages::SendAddBuff(const_cast<LWOOBJID&>(m_Parent.GetObjectID()), source, static_cast<uint32_t>(id),
 		static_cast<uint32_t>(duration) * 1000, addImmunity, cancelOnDamaged, cancelOnDeath,
 		cancelOnLogout, cancelOnRemoveBuff, cancelOnUi, cancelOnUnequip, cancelOnZone, addedByTeammate, applyOnTeammates);
 
@@ -194,13 +194,12 @@ void BuffComponent::ApplyBuff(const int32_t id, const float duration, const LWOO
 
 	m_Buffs.emplace(id, buff);
 
-	auto* parent = GetParent();
 	if (!cancelOnDeath) return;
-
-	m_Parent->AddDieCallback([parent, id]() {
+	
+	auto parent = GetParent();
+	m_Parent.AddDieCallback([parent, id]() {
 		LOG_DEBUG("Removing buff %i because parent died", id);
-		if (!parent) return;
-		auto* buffComponent = parent->GetComponent<BuffComponent>();
+		auto* buffComponent = parent.GetComponent<BuffComponent>();
 		if (buffComponent) buffComponent->RemoveBuff(id, false, false, true);
 		});
 }
@@ -238,7 +237,7 @@ void BuffComponent::ApplyBuffEffect(int32_t id) {
 		if (parameter.name == "max_health") {
 			const auto maxHealth = parameter.value;
 
-			auto* destroyable = this->GetParent()->GetComponent<DestroyableComponent>();
+			auto* destroyable = this->GetParent().GetComponent<DestroyableComponent>();
 
 			if (destroyable == nullptr) return;
 
@@ -246,7 +245,7 @@ void BuffComponent::ApplyBuffEffect(int32_t id) {
 		} else if (parameter.name == "max_armor") {
 			const auto maxArmor = parameter.value;
 
-			auto* destroyable = this->GetParent()->GetComponent<DestroyableComponent>();
+			auto* destroyable = this->GetParent().GetComponent<DestroyableComponent>();
 
 			if (destroyable == nullptr) return;
 
@@ -254,13 +253,13 @@ void BuffComponent::ApplyBuffEffect(int32_t id) {
 		} else if (parameter.name == "max_imagination") {
 			const auto maxImagination = parameter.value;
 
-			auto* destroyable = this->GetParent()->GetComponent<DestroyableComponent>();
+			auto* destroyable = this->GetParent().GetComponent<DestroyableComponent>();
 
 			if (destroyable == nullptr) return;
 
 			destroyable->SetMaxImagination(destroyable->GetMaxImagination() + maxImagination);
 		} else if (parameter.name == "speed") {
-			auto* controllablePhysicsComponent = this->GetParent()->GetComponent<ControllablePhysicsComponent>();
+			auto* controllablePhysicsComponent = this->GetParent().GetComponent<ControllablePhysicsComponent>();
 			if (!controllablePhysicsComponent) return;
 			const auto speed = parameter.value;
 			controllablePhysicsComponent->AddSpeedboost(speed);
@@ -275,7 +274,7 @@ void BuffComponent::RemoveBuffEffect(int32_t id) {
 		if (parameter.name == "max_health") {
 			const auto maxHealth = parameter.value;
 
-			auto* destroyable = this->GetParent()->GetComponent<DestroyableComponent>();
+			auto* destroyable = this->GetParent().GetComponent<DestroyableComponent>();
 
 			if (destroyable == nullptr) return;
 
@@ -283,7 +282,7 @@ void BuffComponent::RemoveBuffEffect(int32_t id) {
 		} else if (parameter.name == "max_armor") {
 			const auto maxArmor = parameter.value;
 
-			auto* destroyable = this->GetParent()->GetComponent<DestroyableComponent>();
+			auto* destroyable = this->GetParent().GetComponent<DestroyableComponent>();
 
 			if (destroyable == nullptr) return;
 
@@ -291,13 +290,13 @@ void BuffComponent::RemoveBuffEffect(int32_t id) {
 		} else if (parameter.name == "max_imagination") {
 			const auto maxImagination = parameter.value;
 
-			auto* destroyable = this->GetParent()->GetComponent<DestroyableComponent>();
+			auto* destroyable = this->GetParent().GetComponent<DestroyableComponent>();
 
 			if (destroyable == nullptr) return;
 
 			destroyable->SetMaxImagination(destroyable->GetMaxImagination() - maxImagination);
 		} else if (parameter.name == "speed") {
-			auto* controllablePhysicsComponent = this->GetParent()->GetComponent<ControllablePhysicsComponent>();
+			auto* controllablePhysicsComponent = this->GetParent().GetComponent<ControllablePhysicsComponent>();
 			if (!controllablePhysicsComponent) return;
 			const auto speed = parameter.value;
 			controllablePhysicsComponent->RemoveSpeedboost(speed);
@@ -323,7 +322,7 @@ void BuffComponent::ReApplyBuffs() {
 	}
 }
 
-Entity* BuffComponent::GetParent() const {
+Entity& BuffComponent::GetParent() {
 	return m_Parent;
 }
 

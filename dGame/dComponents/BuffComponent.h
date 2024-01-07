@@ -51,11 +51,11 @@ class BuffComponent : public Component {
 public:
 	inline static const eReplicaComponentType ComponentType = eReplicaComponentType::BUFF;
 
-	explicit BuffComponent(Entity* parent);
+	explicit BuffComponent(Entity& parent);
 
 	~BuffComponent();
 
-	Entity* GetParent() const;
+	Entity& GetParent();
 
 	void LoadFromXml(tinyxml2::XMLDocument* doc) override;
 

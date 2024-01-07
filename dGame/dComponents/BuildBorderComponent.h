@@ -18,7 +18,7 @@ class BuildBorderComponent : public Component {
 public:
 	inline static const eReplicaComponentType ComponentType = eReplicaComponentType::BUILD_BORDER;
 
-	BuildBorderComponent(Entity* parent);
+	BuildBorderComponent(Entity& parent);
 	~BuildBorderComponent() override;
 
 	/**

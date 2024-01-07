@@ -30,7 +30,7 @@ class SimplePhysicsComponent : public PhysicsComponent {
 public:
 	inline static const eReplicaComponentType ComponentType = eReplicaComponentType::SIMPLE_PHYSICS;
 
-	SimplePhysicsComponent(Entity* parent, uint32_t componentID);
+	SimplePhysicsComponent(Entity& parent, uint32_t componentID);
 	~SimplePhysicsComponent() override;
 
 	void Serialize(RakNet::BitStream* outBitStream, bool bIsInitialUpdate) override;

@@ -19,7 +19,7 @@ public:
 	 * Constructor for this component
 	 * @param parent parent that contains this component
 	 */
-	LevelProgressionComponent(Entity* parent);
+	LevelProgressionComponent(Entity& parent);
 
 	void Serialize(RakNet::BitStream* outBitStream, bool bIsInitialUpdate) override;
 

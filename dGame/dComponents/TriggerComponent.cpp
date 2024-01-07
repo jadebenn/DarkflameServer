@@ -15,7 +15,7 @@
 #include "eEndBehavior.h"
 
 
-TriggerComponent::TriggerComponent(Entity* parent, const std::string triggerInfo): Component(parent) {
+TriggerComponent::TriggerComponent(Entity& parent, const std::string triggerInfo): Component(parent) {
 	m_Parent = parent;
 	m_Trigger = nullptr;
 
@@ -110,13 +110,13 @@ void TriggerComponent::HandleTriggerCommand(LUTriggers::Command* command, Entity
 				HandlePlayEffect(targetEntity, argArray);
 				break;
 			case eTriggerCommandType::STOP_EFFECT:
-				GameMessages::SendStopFXEffect(targetEntity, true, command->args);
+				GameMessages::SendStopFXEffect(*targetEntity, true, command->args);
 				break;
 			case eTriggerCommandType::CAST_SKILL:
 				HandleCastSkill(targetEntity, command->args);
 				break;
 			case eTriggerCommandType::DISPLAY_ZONE_SUMMARY:
-				GameMessages::SendDisplayZoneSummary(targetEntity->GetObjectID(), targetEntity->GetSystemAddress(), false, command->args == "1", m_Parent->GetObjectID());
+				GameMessages::SendDisplayZoneSummary(targetEntity->GetObjectID(), targetEntity->GetSystemAddress(), false, command->args == "1", m_Parent.GetObjectID());
 				break;
 			case eTriggerCommandType::SET_PHYSICS_VOLUME_EFFECT:
 				HandleSetPhysicsVolumeEffect(targetEntity, argArray);
@@ -164,7 +164,7 @@ void TriggerComponent::HandleTriggerCommand(LUTriggers::Command* command, Entity
 std::vector<Entity*> TriggerComponent::GatherTargets(LUTriggers::Command* command, Entity* optionalTarget) {
 	std::vector<Entity*> entities = {};
 
-	if (command->target == "self") entities.push_back(m_Parent);
+	if (command->target == "self") entities.push_back(&m_Parent);
 	else if (command->target == "zone") { /*TODO*/ }
 	else if (command->target == "target" && optionalTarget) entities.push_back(optionalTarget);
 	else if (command->target == "targetTeam" && optionalTarget) {
@@ -185,14 +185,14 @@ std::vector<Entity*> TriggerComponent::GatherTargets(LUTriggers::Command* comman
 
 void TriggerComponent::HandleFireEvent(Entity* targetEntity, std::string args) {
 	for (CppScripts::Script* script : CppScripts::GetEntityScripts(targetEntity)) {
-		script->OnFireEventServerSide(targetEntity, m_Parent, args, 0, 0, 0);
+		script->OnFireEventServerSide(targetEntity, &m_Parent, args, 0, 0, 0);
 	}
 }
 
 void TriggerComponent::HandleDestroyObject(Entity* targetEntity, std::string args){
 	uint32_t killType;
 	GeneralUtils::TryParse<uint32_t>(args, killType);
-	targetEntity->Smash(m_Parent->GetObjectID(), static_cast<eKillType>(killType));
+	targetEntity->Smash(m_Parent.GetObjectID(), static_cast<eKillType>(killType));
 }
 
 void TriggerComponent::HandleToggleTrigger(Entity* targetEntity, std::string args){
@@ -237,7 +237,7 @@ void TriggerComponent::HandleRotateObject(Entity* targetEntity, std::vector<std:
 void TriggerComponent::HandlePushObject(Entity* targetEntity, std::vector<std::string> argArray){
 	if (argArray.size() < 3) return;
 
-	auto* phantomPhysicsComponent = m_Parent->GetComponent<PhantomPhysicsComponent>();
+	auto* phantomPhysicsComponent = m_Parent.GetComponent<PhantomPhysicsComponent>();
 	if (!phantomPhysicsComponent) {
 		LOG_DEBUG("Phantom Physics component not found!");
 		return;
@@ -249,12 +249,12 @@ void TriggerComponent::HandlePushObject(Entity* targetEntity, std::vector<std::s
 	GeneralUtils::TryParse(argArray.at(0), argArray.at(1), argArray.at(2), direction);
 	phantomPhysicsComponent->SetDirection(direction);
 
-	Game::entityManager->SerializeEntity(m_Parent);
+	Game::entityManager->SerializeEntity(&m_Parent);
 }
 
 
 void TriggerComponent::HandleRepelObject(Entity* targetEntity, std::string args){
-	auto* phantomPhysicsComponent = m_Parent->GetComponent<PhantomPhysicsComponent>();
+	auto* phantomPhysicsComponent = m_Parent.GetComponent<PhantomPhysicsComponent>();
 	if (!phantomPhysicsComponent) {
 		LOG_DEBUG("Phantom Physics component not found!");
 		return;
@@ -265,7 +265,7 @@ void TriggerComponent::HandleRepelObject(Entity* targetEntity, std::string args)
 	phantomPhysicsComponent->SetEffectType(ePhysicsEffectType::REPULSE);
 	phantomPhysicsComponent->SetDirectionalMultiplier(forceMultiplier);
 
-	auto triggerPos = m_Parent->GetPosition();
+	auto triggerPos = m_Parent.GetPosition();
 	auto targetPos = targetEntity->GetPosition();
 
 	// normalize the vectors to get the direction
@@ -274,7 +274,7 @@ void TriggerComponent::HandleRepelObject(Entity* targetEntity, std::string args)
 	NiPoint3 direction = delta / length;
 	phantomPhysicsComponent->SetDirection(direction);
 
-	Game::entityManager->SerializeEntity(m_Parent);
+	Game::entityManager->SerializeEntity(&m_Parent);
 }
 
 void TriggerComponent::HandleSetTimer(Entity* targetEntity, std::vector<std::string> argArray){
@@ -284,11 +284,11 @@ void TriggerComponent::HandleSetTimer(Entity* targetEntity, std::vector<std::str
 	}
 	float time = 0.0;
 	GeneralUtils::TryParse<float>(argArray.at(1), time);
-	m_Parent->AddTimer(argArray.at(0), time);
+	m_Parent.AddTimer(argArray.at(0), time);
 }
 
 void TriggerComponent::HandleCancelTimer(Entity* targetEntity, std::string args){
-	m_Parent->CancelTimer(args);
+	m_Parent.CancelTimer(args);
 }
 
 void TriggerComponent::HandlePlayCinematic(Entity* targetEntity, std::vector<std::string> argArray) {
@@ -349,7 +349,7 @@ void TriggerComponent::HandlePlayEffect(Entity* targetEntity, std::vector<std::s
 	std::u16string effectType = GeneralUtils::UTF8ToUTF16(argArray.at(2));
 	float priority = 1;
 	if (argArray.size() == 4) GeneralUtils::TryParse<float>(argArray.at(3), priority);
-	GameMessages::SendPlayFXEffect(targetEntity, effectID, effectType, argArray.at(0), LWOOBJID_EMPTY, priority);
+	GameMessages::SendPlayFXEffect(*targetEntity, effectID, effectType, argArray.at(0), LWOOBJID_EMPTY, priority);
 }
 
 void TriggerComponent::HandleCastSkill(Entity* targetEntity, std::string args){

@@ -10,14 +10,14 @@ class Entity;
 class Component
 {
 public:
-	Component(Entity* parent);
+	Component(Entity& parent);
 	virtual ~Component();
 
 	/**
 	 * Gets the owner of this component
 	 * @return the owner of this component
 	 */
-	Entity* GetParent() const;
+	Entity& GetParent() const;
 
 	/**
 	 * Updates the component in the game loop
@@ -50,5 +50,5 @@ protected:
 	/**
 	 * The entity that owns this component
 	 */
-	Entity* m_Parent;
+	Entity& m_Parent;
 };

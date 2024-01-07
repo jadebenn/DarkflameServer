@@ -74,13 +74,13 @@ namespace GameMessages {
 		int iIndex = 0, int iDesiredWaypointIndex = 1, int nextIndex = 1,
 		eMovementPlatformState movementState = eMovementPlatformState::Moving);
 
-	void SendResetMissions(Entity* entity, const SystemAddress& sysAddr, const int32_t missionid = -1);
+	void SendResetMissions(Entity& entity, const SystemAddress& sysAddr, const int32_t missionid = -1);
 	void SendRestoreToPostLoadStats(Entity* entity, const SystemAddress& sysAddr);
 	void SendServerDoneLoadingAllObjects(Entity* entity, const SystemAddress& sysAddr);
 	void SendGMLevelBroadcast(const LWOOBJID& objectID, eGameMasterLevel level);
 	void SendChatModeUpdate(const LWOOBJID& objectID, eGameMasterLevel level);
 
-	void SendAddItemToInventoryClientSync(Entity* entity, const SystemAddress& sysAddr, Item* item, const LWOOBJID& objectID, bool showFlyingLoot, int itemCount, LWOOBJID subKey = LWOOBJID_EMPTY, eLootSourceType lootSourceType = eLootSourceType::NONE);
+	void SendAddItemToInventoryClientSync(const Entity& entity, const SystemAddress& sysAddr, Item* item, const LWOOBJID& objectID, bool showFlyingLoot, int itemCount, LWOOBJID subKey = LWOOBJID_EMPTY, eLootSourceType lootSourceType = eLootSourceType::NONE);
 	void SendNotifyClientFlagChange(const LWOOBJID& objectID, uint32_t iFlagID, bool bFlag, const SystemAddress& sysAddr);
 	void SendChangeObjectWorldState(const LWOOBJID& objectID, eObjectWorldState state, const SystemAddress& sysAddr);
 
@@ -89,53 +89,55 @@ namespace GameMessages {
 	void SendNotifyMissionTask(Entity* entity, const SystemAddress& sysAddr, int missionID, int taskMask, std::vector<float> updates);
 	void NotifyLevelRewards(LWOOBJID objectID, const SystemAddress& sysAddr, int level, bool sending_rewards);
 
-	void SendModifyLEGOScore(Entity* entity, const SystemAddress& sysAddr, int64_t score, eLootSourceType sourceType);
-	void SendUIMessageServerToSingleClient(Entity* entity, const SystemAddress& sysAddr, const std::string& message, AMFBaseValue& args);
+	void SendModifyLEGOScore(const Entity& entity, const SystemAddress& sysAddr, const int64_t score, const eLootSourceType sourceType);
+	void SendUIMessageServerToSingleClient(const Entity& entity, const SystemAddress& sysAddr, const std::string& message, AMFBaseValue& args);
 	void SendUIMessageServerToAllClients(const std::string& message, AMFBaseValue& args);
 
 	void SendPlayEmbeddedEffectOnAllClientsNearObject(Entity* entity, std::u16string effectName, const LWOOBJID& fromObjectID, float radius);
-	void SendPlayFXEffect(Entity* entity, int32_t effectID, const std::u16string& effectType, const std::string& name, LWOOBJID secondary, float priority = 1, float scale = 1, bool serialize = true);
-	void SendPlayFXEffect(const LWOOBJID& entity, int32_t effectID, const std::u16string& effectType, const std::string& name, LWOOBJID secondary = LWOOBJID_EMPTY, float priority = 1, float scale = 1, bool serialize = true);
-	void SendStopFXEffect(Entity* entity, bool killImmediate, std::string name);
+	void SendPlayFXEffect(const Entity* entity, const int32_t effectID, const std::u16string& effectType, const std::string& name, const LWOOBJID secondary, const float priority = 1, const float scale = 1, const bool serialize = true);
+	void SendPlayFXEffect(const Entity& entity, const int32_t effectID, const std::u16string& effectType, const std::string& name, const LWOOBJID secondary, const float priority = 1, const float scale = 1, const bool serialize = true);
+	void SendPlayFXEffect(const LWOOBJID& entity, const int32_t effectID, const std::u16string& effectType, const std::string& name, const LWOOBJID secondary = LWOOBJID_EMPTY, const float priority = 1, const float scale = 1, const bool serialize = true);
+	void SendStopFXEffect(const Entity* entity, const bool killImmediate, const std::string& name);
+	void SendStopFXEffect(const Entity& entity, const bool killImmediate, const std::string& name);
 	void SendBroadcastTextToChatbox(Entity* entity, const SystemAddress& sysAddr, const std::u16string& attrs, const std::u16string& wsText);
 	void SendSetCurrency(Entity* entity, int64_t currency, int lootType, const LWOOBJID& sourceID, const LOT& sourceLOT, int sourceTradeID, bool overrideCurrent, eLootSourceType sourceType);
 
-	void SendQuickBuildNotifyState(Entity* entity, eQuickBuildState prevState, eQuickBuildState state, const LWOOBJID& playerID);
-	void SendEnableQuickBuild(Entity* entity, bool enable, bool fail, bool success, eQuickBuildFailReason failReason, float duration, const LWOOBJID& playerID);
+	void SendQuickBuildNotifyState(const Entity& entity, const eQuickBuildState prevState, const eQuickBuildState state, const LWOOBJID& playerID);
+	void SendEnableQuickBuild(const Entity& entity, const bool enable, const bool fail, const bool success, const eQuickBuildFailReason failReason, const float duration, const LWOOBJID& playerID);
 	void AddActivityOwner(Entity* entity, LWOOBJID& ownerID);
 	void SendTerminateInteraction(const LWOOBJID& objectID, eTerminateType type, const LWOOBJID& terminator);
 
-	void SendDieNoImplCode(Entity* entity, const LWOOBJID& killerID, const LWOOBJID& lootOwnerID, eKillType killType, std::u16string deathType, float directionRelative_AngleY, float directionRelative_AngleXZ, float directionRelative_Force, bool bClientDeath, bool bSpawnLoot);
-	void SendDie(Entity* entity, const LWOOBJID& killerID, const LWOOBJID& lootOwnerID, bool bDieAccepted, eKillType killType, std::u16string deathType, float directionRelative_AngleY, float directionRelative_AngleXZ, float directionRelative_Force, bool bClientDeath, bool bSpawnLoot, float coinSpawnTime);
+	void SendDieNoImplCode(const Entity& entity, const LWOOBJID& killerID, const LWOOBJID& lootOwnerID, const eKillType killType, const std::u16string deathType, const float directionRelative_AngleY, const float directionRelative_AngleXZ, const float directionRelative_Force, const bool bClientDeath, const bool bSpawnLoot);
+	void SendDie(const Entity& entity, const LWOOBJID& killerID, const LWOOBJID& lootOwnerID, const bool bDieAccepted, const eKillType killType, const std::u16string deathType, const float directionRelative_AngleY, const float directionRelative_AngleXZ, const float directionRelative_Force, const bool bClientDeath, const bool bSpawnLoot, const float coinSpawnTime);
 
-	void SendSetInventorySize(Entity* entity, int invType, int size);
+	void SendSetInventorySize(const Entity& entity, const int invType, const int size);
 
 	void SendSetGravityScale(const LWOOBJID& target, const float effectScale, const SystemAddress& sysAddr);
 
 	void SendSetEmoteLockState(Entity* entity, bool bLock, int emoteID);
-	void SendSetJetPackMode(Entity* entity, bool use, bool bypassChecks = false, bool doHover = false, int effectID = -1, float airspeed = 10, float maxAirspeed = 15, float verticalVelocity = 1, int warningEffectID = -1);
+	void SendSetJetPackMode(const Entity& entity, const bool use, const bool bypassChecks = false, const bool doHover = false, const int effectID = -1, const float airspeed = 10, const float maxAirspeed = 15, const float verticalVelocity = 1, const int warningEffectID = -1);
 	void SendResurrect(Entity* entity);
 	void SendStop2DAmbientSound(Entity* entity, bool force, std::string audioGUID, bool result = false);
 	void SendPlay2DAmbientSound(Entity* entity, std::string audioGUID, bool result = false);
 	void SendSetNetworkScriptVar(Entity* entity, const SystemAddress& sysAddr, std::string data);
-	void SendDropClientLoot(Entity* entity, const LWOOBJID& sourceID, LOT item, int currency, NiPoint3 spawnPos = NiPoint3::ZERO, int count = 1);
+	void SendDropClientLoot(Entity& entity, const LWOOBJID& sourceID, const LOT item, const int currency, const NiPoint3 spawnPos = NiPoint3::ZERO, const int count = 1);
 
-	void SendSetPlayerControlScheme(Entity* entity, eControlScheme controlScheme);
+	void SendSetPlayerControlScheme(const Entity& entity, const eControlScheme controlScheme);
 	void SendPlayerReachedRespawnCheckpoint(Entity* entity, const NiPoint3& position, const NiQuaternion& rotation);
 
-	void SendAddSkill(Entity* entity, TSkillID skillID, BehaviorSlot slotID);
-	void SendRemoveSkill(Entity* entity, TSkillID skillID);
+	void SendAddSkill(const Entity& entity, const TSkillID skillID, const BehaviorSlot slotID);
+	void SendRemoveSkill(const Entity& entity, const TSkillID skillID);
 
 	void SendFinishArrangingWithItem(Entity* entity, const LWOOBJID& buildAreaID);
 	void SendModularBuildEnd(Entity* entity);
 
-	void SendVendorOpenWindow(Entity* entity, const SystemAddress& sysAddr);
-	void SendVendorStatusUpdate(Entity* entity, const SystemAddress& sysAddr, bool bUpdateOnly = false);
+	void SendVendorOpenWindow(const Entity& entity, const SystemAddress& sysAddr);
+	void SendVendorStatusUpdate(const Entity& entity, const SystemAddress& sysAddr, const bool bUpdateOnly = false);
 	void SendVendorTransactionResult(Entity* entity, const SystemAddress& sysAddr);
 
-	void SendRemoveItemFromInventory(Entity* entity, const SystemAddress& sysAddr, LWOOBJID iObjID, LOT templateID, int inventoryType, uint32_t stackCount, uint32_t stackRemaining);
+	void SendRemoveItemFromInventory(const Entity& entity, const SystemAddress& sysAddr, const LWOOBJID iObjID, const LOT templateID, const int inventoryType, const uint32_t stackCount, const uint32_t stackRemaining);
 	void SendConsumeClientItem(Entity* entity, bool bSuccess, LWOOBJID item);
-	void SendUseItemResult(Entity* entity, LOT templateID, bool useItemResult);
+	void SendUseItemResult(const Entity& entity, const LOT templateID, const bool useItemResult);
 	void SendMoveInventoryBatch(Entity* entity, uint32_t stackCount, int srcInv, int dstInv, const LWOOBJID& iObjID);
 
 	void SendMatchResponse(Entity* entity, const SystemAddress& sysAddr, int response);
@@ -442,7 +444,7 @@ namespace GameMessages {
 	 * @param sysAddr the system address to send game message responses to
 	 * @param objectID LWOOBJID of the item in inventory that is being used
 	 */
-	void SendSetMountInventoryID(Entity* entity, const LWOOBJID& objectID, const SystemAddress& sysAddr);
+	void SendSetMountInventoryID(const Entity& entity, const LWOOBJID& objectID, const SystemAddress& sysAddr);
 
 	/**
 	 * @brief Handle client dismounting mount
@@ -640,7 +642,7 @@ namespace GameMessages {
 
 	void HandleReportBug(RakNet::BitStream* inStream, Entity* entity);
 
-	void SendRemoveBuff(Entity* entity, bool fromUnEquip, bool removeImmunity, uint32_t buffId);
+	void SendRemoveBuff(const Entity& entity, const bool fromUnEquip, const bool removeImmunity, const uint32_t buffId);
 
 	// bubble
 	void HandleDeactivateBubbleBuff(RakNet::BitStream* inStream, Entity* entity);
