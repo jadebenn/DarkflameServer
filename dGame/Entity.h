@@ -12,8 +12,8 @@
 #include "LDFFormat.h"
 #include "eKillType.h"
 
-#include "EntityTimer.h"
-#include "EntityCallbackTimer.h"
+//#include "EntityTimer.h"
+//#include "EntityCallbackTimer.h"
 
 namespace Loot {
 	class Info;
@@ -29,11 +29,12 @@ class User;
 class Spawner;
 class ScriptComponent;
 class dpEntity;
-//class EntityTimer;
+class EntityTimer;
 class Component;
 class Item;
 class Character;
-//class EntityCallbackTimer;
+class EntityCallbackTimer;
+class PositionUpdate;
 enum class eTriggerEventType;
 enum class eGameMasterLevel : uint8_t;
 enum class eReplicaComponentType : uint32_t;
@@ -298,6 +299,8 @@ public:
 	std::vector<LWOOBJID>& GetTargetsInPhantom();
 
 	Entity* GetScheduledKiller() { return m_ScheduleKiller; }
+
+	void ProcessPositionUpdate(PositionUpdate& update);
 
 protected:
 	LWOOBJID m_ObjectID;
